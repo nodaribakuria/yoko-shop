@@ -1,4 +1,5 @@
 const defaultProducts = [
+  {id:9,name:'DOMINA 1023 — ლაქის ჩექმები',category:'ტანსაცმელი',price:200,oldPrice:360,badge:'−44%',featured:0,image:'domina-1023.png',alt:'წითელი ლაქის მაღალქუსლიანი ჩექმები'},
   {id:1,name:'კლასიკური ტრენჩი',category:'ტანსაცმელი',price:189,oldPrice:null,badge:'ახალი',featured:1,image:'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=750&q=80',alt:'ღია ფერის ტრენჩი'},
   {id:2,name:'ყოველდღიური ტოტე',category:'აქსესუარები',price:95,oldPrice:120,badge:'−20%',featured:2,image:'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=750&q=80',alt:'ყავისფერი ყოველდღიური ჩანთა'},
   {id:3,name:'ქსოვილის პერანგი',category:'ტანსაცმელი',price:115,oldPrice:null,badge:'ბესტსელერი',featured:3,image:'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=750&q=80',alt:'თეთრი ქსოვილის პერანგი'},
@@ -135,8 +136,9 @@ $('.search-toggle').addEventListener('click',()=>{$('#shop').scrollIntoView({beh
 $('.wishlist-shortcut').addEventListener('click',()=>{showOnlyFavorites=true;activeFilter='ყველა';searchTerm='';$('#product-search').value='';renderProducts();$('#shop').scrollIntoView({behavior:'smooth'});showToast(favorites.length?`რჩეულებში ${favorites.length} პროდუქტია`:'რჩეულებში ჯერ პროდუქტი არ არის')});
 $('.menu-toggle').addEventListener('click',()=>{const existing=$('.mobile-nav');if(existing){existing.remove();return}const nav=document.createElement('nav');nav.className='mobile-nav';nav.innerHTML='<a href="#shop">მაღაზია</a><a href="#categories">კატეგორიები</a><a href="#story">ჩვენ შესახებ</a>';$('.site-header').after(nav);nav.addEventListener('click',event=>{if(event.target.closest('a'))nav.remove()})});
 $('#newsletter-form').addEventListener('submit',event=>{event.preventDefault();$('#newsletter-message').textContent='მადლობა გამოწერისთვის! სიახლე მალე შეგხვდება.';$('#newsletter-email').value=''});
-$('#checkout-button').addEventListener('click',()=>{$('#checkout-dialog').showModal()});
-$('#checkout-form').addEventListener('submit',event=>{event.preventDefault();$('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart()});
+function requireProfileForPurchase(){if(profile&&profile.name&&profile.email)return true;window.location.href='index.html';return false}
+$('#checkout-button').addEventListener('click',()=>{if(!requireProfileForPurchase())return;$('#checkout-dialog').showModal()});
+$('#checkout-form').addEventListener('submit',event=>{event.preventDefault();if(!requireProfileForPurchase())return;$('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart()});
 $('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;closeCart()});
 
 renderProducts();renderCart();
