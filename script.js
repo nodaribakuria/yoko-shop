@@ -15,6 +15,7 @@ const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const money = amount => `${amount.toLocaleString('ka-GE')} ₾`;
 const readStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+const supabaseClient = window.yokoSupabase;
 const savedProducts = readStored('yoko-products', []);
 let products = [...defaultProducts, ...(Array.isArray(savedProducts) ? savedProducts.map(product => ({...product, image:product.image?.includes('images.unsplash.com') ? '' : product.image})) : [])];
 let activeFilter = 'ყველა';
@@ -22,7 +23,7 @@ let searchTerm = '';
 let showOnlyFavorites = false;
 let cart = readStored('yoko-cart', []);
 let favorites = readStored('yoko-favorites', []);
-let profile = readStored('yoko-profile', null);
+let profile = null;
 let toastTimer;
 
 function renderProducts(){
@@ -64,49 +65,75 @@ function renderProfile(){
   if(!hasProfile) return;
   $('#profile-name').textContent = profile.name;
   $('#profile-email').textContent = profile.email;
-  const ownedProducts = products.filter(product => product.owner === profile.email);
+  const ownedProducts = products.filter(product => product.owner === profile.id || product.owner === profile.email);
   $('#profile-product-count').textContent = `(${ownedProducts.length})`;
   $('#profile-product-list').innerHTML = ownedProducts.length ? ownedProducts.map(product => `<div class="profile-listing"><div><strong>${escapeHtml(product.name)}</strong><span>${money(product.price)} · ${escapeHtml(product.category)}</span></div><button type="button" data-remove-product="${product.id}">წაშლა</button></div>`).join('') : '<p class="profile-empty-list">ჯერ პროდუქტი არ დაგიმატებია.</p>';
 }
 
-function safeImageUrl(value){
-  if(!value) return '';
-  try { const imageUrl = new URL(value); if(imageUrl.protocol === 'https:') return imageUrl.href; } catch {}
-  return '';
+function mapServerProduct(row){return {id:Number(row.id),name:row.name,category:row.category,price:Number(row.price),oldPrice:row.old_price===null?null:Number(row.old_price),badge:row.badge||'ახალი',featured:Number(row.created_at?new Date(row.created_at).getTime():row.id),image:row.image_url||'',imagePath:row.image_path||'',alt:row.alt||row.name,owner:row.user_id,remote:true}}
+function saveOwnedProducts(){localStorage.setItem('yoko-products',JSON.stringify(products.filter(product=>product.owner&&!product.remote)))}
+
+async function uploadProductImage(file){
+  if(!file)return {url:'',path:''};
+  const allowed=['image/jpeg','image/png','image/webp','image/gif'];
+  if(!allowed.includes(file.type))throw new Error('ფოტო უნდა იყოს JPG, PNG, WebP ან GIF ფორმატში.');
+  if(file.size>5*1024*1024)throw new Error('ფოტოს ზომა 5 MB-ს არ უნდა აღემატებოდეს.');
+  const safeName=file.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-80)||'photo';
+  const path=`${profile.id}/${Date.now()}-${safeName}`;
+  const {error}=await supabaseClient.storage.from('product-images').upload(path,file,{cacheControl:'3600',contentType:file.type,upsert:false});
+  if(error)throw new Error('ფოტოს ატვირთვა ვერ მოხერხდა.');
+  const {data}=supabaseClient.storage.from('product-images').getPublicUrl(path);
+  return {url:data.publicUrl,path};
 }
 
-function saveOwnedProducts(){localStorage.setItem('yoko-products',JSON.stringify(products.filter(product=>product.owner)))}
+$('#open-profile').addEventListener('click',async()=>{const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};renderProfile();$('#profile-dialog').showModal()});
+$('#profile-logout').addEventListener('click',async()=>{await supabaseClient.auth.signOut({scope:'local'});location.href='index.html?view=login'});
 
-$('#open-profile').addEventListener('click',()=>{renderProfile();$('#profile-dialog').showModal()});
-$('#profile-logout').addEventListener('click',()=>{localStorage.removeItem('yoko-profile');location.href='index.html?view=login'});
-$('#profile-register-form').addEventListener('submit',event=>{
-  event.preventDefault();
-  const form = event.currentTarget;
-  const data = new FormData(form);
-  if(data.get('password') !== data.get('passwordConfirm')){showToast('პაროლები ერთმანეთს არ ემთხვევა');return}
-  profile = {name:String(data.get('name')).trim(),email:String(data.get('email')).trim().toLocaleLowerCase('ka'),phone:String(data.get('phone')).trim()};
-  localStorage.setItem('yoko-profile',JSON.stringify(profile));
-  form.reset();renderProfile();showToast('პროფილი შეიქმნა ამ ბრაუზერში');
+const productImageInput=$('#product-image-file');
+let productPreviewUrl='';
+productImageInput.addEventListener('change',()=>{
+  if(productPreviewUrl)URL.revokeObjectURL(productPreviewUrl);
+  const file=productImageInput.files[0];
+  const preview=$('#product-image-preview');
+  if(!file){preview.hidden=true;preview.innerHTML='';return}
+  productPreviewUrl=URL.createObjectURL(file);
+  preview.innerHTML=`<img src="${productPreviewUrl}" alt="არჩეული პროდუქტის ფოტო" />`;
+  preview.hidden=false;
 });
 
-$('#product-form').addEventListener('submit',event=>{
+$('#product-form').addEventListener('submit',async event=>{
   event.preventDefault();
-  if(!profile){showToast('პროდუქტის დასამატებლად შექმენი პროფილი');return}
+  if(!profile||!supabaseClient){showToast('პროდუქტის დასამატებლად სერვერზე შესვლა აუცილებელია');return}
   const form = event.currentTarget;
   const data = new FormData(form);
   const name = String(data.get('name')).trim();
   const category = String(data.get('category'));
   const price = Number(data.get('price'));
   if(!name || !Number.isFinite(price) || price <= 0){showToast('შეამოწმე პროდუქტის სახელი და ფასი');return}
-  const id = Date.now();
-  products.push({id,name,category,price,oldPrice:null,badge:'ახალი',featured:id,image:safeImageUrl(String(data.get('image')).trim(),category),alt:name,owner:profile.email});
-  saveOwnedProducts();form.reset();renderProducts();renderProfile();showToast('პროდუქტი მაღაზიის კატალოგს დაემატა');
+  const button=form.querySelector('button[type="submit"]');button.disabled=true;
+  let uploaded=null;
+  try{
+    uploaded=await uploadProductImage(productImageInput.files[0]);
+    const row={id:Date.now(),user_id:profile.id,name,category,price,old_price:null,badge:'ახალი',image_url:uploaded.url,image_path:uploaded.path,alt:name};
+    const {data:created,error}=await supabaseClient.from('products').insert(row).select().single();
+    if(error)throw new Error('პროდუქტის შენახვა ვერ მოხერხდა.');
+    products.push(mapServerProduct(created));
+    form.reset();if(productPreviewUrl)URL.revokeObjectURL(productPreviewUrl);productPreviewUrl='';$('#product-image-preview').hidden=true;$('#product-image-preview').innerHTML='';
+    renderProducts();renderProfile();showToast('პროდუქტი და ფოტო საიტზე აიტვირთა');
+  }catch(error){if(uploaded?.path)await supabaseClient.storage.from('product-images').remove([uploaded.path]);showToast(error.message||'ატვირთვა ვერ მოხერხდა')}
+  finally{button.disabled=false}
 });
 
-$('#profile-product-list').addEventListener('click',event=>{
+$('#profile-product-list').addEventListener('click',async event=>{
   const button = event.target.closest('[data-remove-product]');
   if(!button) return;
   const id = Number(button.dataset.removeProduct);
+  const product=products.find(item=>item.id===id);
+  if(product?.remote){
+    const {error}=await supabaseClient.from('products').delete().eq('id',id);
+    if(error){showToast('პროდუქტის წაშლა ვერ მოხერხდა');return}
+    if(product.imagePath)await supabaseClient.storage.from('product-images').remove([product.imagePath]);
+  }
   products = products.filter(product=>product.id!==id);
   cart = cart.filter(item=>item.id!==id);
   favorites = favorites.filter(item=>item!==id);
@@ -137,4 +164,18 @@ $('#checkout-button').addEventListener('click',()=>{if(!requireProfileForPurchas
 $('#checkout-form').addEventListener('submit',event=>{event.preventDefault();if(!requireProfileForPurchase())return;$('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart()});
 $('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;closeCart()});
 
-renderProducts();renderCart();
+async function initializeStore(){
+  if(!supabaseClient){location.replace('index.html');return}
+  const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
+  if(sessionError||!sessionData.session){location.replace('index.html');return}
+  const user=sessionData.session.user;
+  profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
+  const {data:rows,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});
+  if(error)showToast('სერვერის კატალოგის ჩატვირთვა ვერ მოხერხდა');
+  else{
+    const local=products.filter(product=>!product.remote);
+    products=[...local,...rows.map(mapServerProduct)];
+  }
+  renderProducts();renderCart();renderProfile();
+}
+initializeStore();

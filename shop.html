@@ -10,6 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="supabase-config.js" defer></script>
     <script src="auth-guard.js" defer></script>
     <script src="script.js" defer></script>
   </head>
@@ -79,28 +81,18 @@
     <dialog class="checkout-dialog profile-dialog" id="profile-dialog" aria-labelledby="profile-title">
       <form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="დახურვა">×</button></form>
       <p class="eyebrow">YOKO SHOP</p><h2 id="profile-title">ჩემი <em>პროფილი</em></h2>
-      <section id="profile-register-panel">
-        <p class="checkout-note">შექმენი პროფილი და დაამატე ახალი პროდუქტები მაღაზიის კატალოგში. ეს დემო ვერსია პროფილს მხოლოდ ამ ბრაუზერში ინახავს.</p>
-        <form id="profile-register-form" class="checkout-form">
-          <label>სახელი და გვარი<input name="name" required minlength="2" autocomplete="name" placeholder="მაგ. ნინო ბერიძე" /></label>
-          <label>ელფოსტა<input name="email" type="email" required autocomplete="email" placeholder="name@example.com" /></label>
-          <label>ტელეფონი<input name="phone" type="tel" autocomplete="tel" placeholder="+995 5XX XX XX XX" /></label>
-          <label>პაროლი<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="მინიმუმ 8 სიმბოლო" /></label>
-          <label>გაიმეორე პაროლი<input name="passwordConfirm" type="password" required minlength="8" autocomplete="new-password" placeholder="პაროლი კიდევ ერთხელ" /></label>
-          <p class="profile-privacy-note">დემო რეჟიმში პაროლი არც ინახება და არც იგზავნება. ნამდვილი რეგისტრაციისთვის საჭიროა სერვერი.</p>
-          <button class="button button-dark" type="submit">პროფილის შექმნა <span>↗</span></button>
-        </form>
-      </section>
+      <section id="profile-register-panel" hidden><p class="checkout-note">ანგარიშის მართვისთვის <a href="index.html?view=login">შესვლის გვერდზე გადასვლა</a>.</p></section>
       <section id="profile-dashboard" hidden>
         <div class="profile-summary"><span class="profile-avatar">y.</span><div><strong id="profile-name"></strong><span id="profile-email"></span></div></div>
         <button class="button button-outline profile-logout" id="profile-logout" type="button">სხვა ანგარიშით შესვლა <span>↗</span></button>
-        <p class="profile-hint">პროდუქტის დამატების შემდეგ ის მაღაზიის კატალოგშიც გამოჩნდება. პროდუქტის მონაცემები ამ ბრაუზერში ინახება.</p>
+        <p class="profile-hint">პროდუქტი და ფოტო მაღაზიის სერვერზე შეინახება.</p>
         <h3 class="profile-section-title">ახალი პროდუქტის დამატება</h3>
         <form id="product-form" class="checkout-form">
           <label>პროდუქტის სახელი<input name="name" required maxlength="60" placeholder="მაგ. თეთრი პერანგი" /></label>
           <label>კატეგორია<select name="category" required><option value="ტანსაცმელი">ტანსაცმელი</option><option value="აქსესუარები">აქსესუარები</option><option value="ნივთები">ნივთები</option></select></label>
           <label>ფასი (₾)<input name="price" type="number" min="1" step="0.01" required placeholder="მაგ. 89" /></label>
-          <label>ფოტოს ბმული <span class="optional-label">(არასავალდებულო)</span><input name="image" type="url" placeholder="https://..." /></label>
+          <label>ფოტოს არჩევა გალერიიდან <span class="optional-label">(არასავალდებულო)</span><input id="product-image-file" name="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" /><small>JPG, PNG, WebP ან GIF · მაქსიმუმ 5 MB</small></label>
+          <div id="product-image-preview" class="product-upload-preview" hidden></div>
           <button class="button button-dark" type="submit">პროდუქტის დამატება <span>＋</span></button>
         </form>
         <div class="profile-listings"><h3 class="profile-section-title">ჩემი დამატებული პროდუქტები <span id="profile-product-count">(0)</span></h3><div id="profile-product-list"></div></div>

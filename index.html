@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="auth.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="supabase-config.js" defer></script>
   <script src="auth.js" defer></script>
 </head>
 <body class="auth-page">
@@ -54,10 +56,12 @@
           <input id="login-email" name="email" type="email" autocomplete="username" placeholder="შენი ელფოსტა" required />
           <label for="login-password">პაროლი</label>
           <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="შენი პაროლი" required />
+          <a class="auth-forgot" href="reset-password.html">პაროლი დაგავიწყდა?</a>
           <p class="auth-error" id="login-error" role="alert" hidden></p>
           <button class="auth-submit" type="submit">შესვლა და მაღაზიაში გადასვლა <span>↗</span></button>
         </form>
-        <p class="auth-note"><span>✦</span> დემო ანგარიშები მხოლოდ ამ ბრაუზერში ინახება. სხვა მოწყობილობიდან შესასვლელად საჭიროა სერვერი.</p>
+        <p class="auth-note"><span>✦</span> უსაფრთხო ანგარიში და პაროლის აღდგენა ელფოსტით.</p>
+        <p class="auth-error backend-warning" id="backend-warning" role="status" hidden></p>
       </div>
       <footer class="auth-bottom"><span>© 2026 Yoko Shop</span><span>შექმნილია სიყვარულით <b>✳</b></span></footer>
     </section>
