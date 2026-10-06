@@ -26,11 +26,15 @@
     </section>
 
     <section class="auth-form-panel">
-      <div class="auth-form-top"><span>კეთილი იყოს შენი მობრძანება</span><span class="auth-step"><i></i> პროფილის შექმნა</span></div>
+      <div class="auth-form-top"><span>კეთილი იყოს შენი მობრძანება</span><span class="auth-step"><i></i> YOKO SHOP</span></div>
       <div class="auth-form-wrap">
         <p class="auth-eyebrow form-eyebrow">დაიწყე აქ</p>
-        <h2>შექმენი შენი<br /><em>Yoko პროფილი</em></h2>
-        <p class="auth-intro">შეავსე ფორმა და გადადი მაღაზიაში.</p>
+        <h2 id="auth-title">შექმენი შენი<br /><em>Yoko პროფილი</em></h2>
+        <p class="auth-intro" id="auth-intro">შეავსე ფორმა და გადადი მაღაზიაში.</p>
+        <div class="auth-tabs" role="tablist" aria-label="ანგარიშის ფორმა">
+          <button class="auth-tab active" id="register-tab" type="button" role="tab" aria-selected="true" aria-controls="registration-form" data-auth-view="register">რეგისტრაცია</button>
+          <button class="auth-tab" id="login-tab" type="button" role="tab" aria-selected="false" aria-controls="login-form" data-auth-view="login">შესვლა</button>
+        </div>
         <form id="registration-form" class="registration-form">
           <label for="full-name">სახელი და გვარი</label>
           <input id="full-name" name="name" type="text" autocomplete="name" placeholder="მაგ. ნინო ბერიძე" minlength="2" required />
@@ -45,7 +49,15 @@
           <p class="auth-error" id="auth-error" role="alert" hidden></p>
           <button class="auth-submit" type="submit">რეგისტრაცია და მაღაზიაში შესვლა <span>↗</span></button>
         </form>
-        <p class="auth-note"><span>✦</span> ეს დემო პროფილი მხოლოდ ამ ბრაუზერში ინახება. რეალური ანგარიშებისთვის საჭიროა სერვერი.</p>
+        <form id="login-form" class="registration-form" hidden>
+          <label for="login-email">ელფოსტა</label>
+          <input id="login-email" name="email" type="email" autocomplete="username" placeholder="შენი ელფოსტა" required />
+          <label for="login-password">პაროლი</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="შენი პაროლი" required />
+          <p class="auth-error" id="login-error" role="alert" hidden></p>
+          <button class="auth-submit" type="submit">შესვლა და მაღაზიაში გადასვლა <span>↗</span></button>
+        </form>
+        <p class="auth-note"><span>✦</span> დემო ანგარიშები მხოლოდ ამ ბრაუზერში ინახება. სხვა მოწყობილობიდან შესასვლელად საჭიროა სერვერი.</p>
       </div>
       <footer class="auth-bottom"><span>© 2026 Yoko Shop</span><span>შექმნილია სიყვარულით <b>✳</b></span></footer>
     </section>

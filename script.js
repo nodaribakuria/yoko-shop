@@ -1,13 +1,13 @@
 const defaultProducts = [
   {id:9,name:'DOMINA 1023 — ლაქის ჩექმები',category:'ტანსაცმელი',price:200,oldPrice:360,badge:'−44%',featured:0,image:'domina-1023.png',alt:'წითელი ლაქის მაღალქუსლიანი ჩექმები'},
-  {id:1,name:'კლასიკური ტრენჩი',category:'ტანსაცმელი',price:189,oldPrice:null,badge:'ახალი',featured:1,image:'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=750&q=80',alt:'ღია ფერის ტრენჩი'},
-  {id:2,name:'ყოველდღიური ტოტე',category:'აქსესუარები',price:95,oldPrice:120,badge:'−20%',featured:2,image:'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=750&q=80',alt:'ყავისფერი ყოველდღიური ჩანთა'},
-  {id:3,name:'ქსოვილის პერანგი',category:'ტანსაცმელი',price:115,oldPrice:null,badge:'ბესტსელერი',featured:3,image:'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=750&q=80',alt:'თეთრი ქსოვილის პერანგი'},
-  {id:4,name:'მინიმალისტური საათი',category:'აქსესუარები',price:149,oldPrice:null,badge:'ახალი',featured:4,image:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=750&q=80',alt:'მინიმალისტური მაჯის საათი'},
-  {id:5,name:'რბილი ნაქსოვი სვიტერი',category:'ტანსაცმელი',price:139,oldPrice:null,badge:'',featured:5,image:'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=750&q=80',alt:'ნაქსოვი ღია ფერის სვიტერი'},
-  {id:6,name:'ყავის ჭიქა — Terra',category:'ნივთები',price:38,oldPrice:null,badge:'ხელნაკეთი',featured:6,image:'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=750&q=80',alt:'კერამიკის ყავის ჭიქა'},
-  {id:7,name:'სათვალე Soleil',category:'აქსესუარები',price:72,oldPrice:null,badge:'',featured:7,image:'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=750&q=80',alt:'მზის სათვალე'},
-  {id:8,name:'სურნელოვანი სანთელი',category:'ნივთები',price:45,oldPrice:null,badge:'',featured:8,image:'https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?auto=format&fit=crop&w=750&q=80',alt:'სურნელოვანი სანთელი'}
+  {id:1,name:'კლასიკური ტრენჩი',category:'ტანსაცმელი',price:189,oldPrice:null,badge:'ახალი',featured:1,image:'',alt:'ღია ფერის ტრენჩი'},
+  {id:2,name:'ყოველდღიური ტოტე',category:'აქსესუარები',price:95,oldPrice:120,badge:'−20%',featured:2,image:'',alt:'ყავისფერი ყოველდღიური ჩანთა'},
+  {id:3,name:'ქსოვილის პერანგი',category:'ტანსაცმელი',price:115,oldPrice:null,badge:'ბესტსელერი',featured:3,image:'',alt:'თეთრი ქსოვილის პერანგი'},
+  {id:4,name:'მინიმალისტური საათი',category:'აქსესუარები',price:149,oldPrice:null,badge:'ახალი',featured:4,image:'',alt:'მინიმალისტური მაჯის საათი'},
+  {id:5,name:'რბილი ნაქსოვი სვიტერი',category:'ტანსაცმელი',price:139,oldPrice:null,badge:'',featured:5,image:'',alt:'ნაქსოვი ღია ფერის სვიტერი'},
+  {id:6,name:'ყავის ჭიქა — Terra',category:'ნივთები',price:38,oldPrice:null,badge:'ხელნაკეთი',featured:6,image:'',alt:'კერამიკის ყავის ჭიქა'},
+  {id:7,name:'სათვალე Soleil',category:'აქსესუარები',price:72,oldPrice:null,badge:'',featured:7,image:'',alt:'მზის სათვალე'},
+  {id:8,name:'სურნელოვანი სანთელი',category:'ნივთები',price:45,oldPrice:null,badge:'',featured:8,image:'',alt:'სურნელოვანი სანთელი'}
 ];
 
 const $ = (selector, root=document) => root.querySelector(selector);
@@ -15,13 +15,8 @@ const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const money = amount => `${amount.toLocaleString('ka-GE')} ₾`;
 const readStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-const categoryImages = {
-  'ტანსაცმელი':'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=750&q=80',
-  'აქსესუარები':'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=750&q=80',
-  'ნივთები':'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=750&q=80'
-};
 const savedProducts = readStored('yoko-products', []);
-let products = [...defaultProducts, ...(Array.isArray(savedProducts) ? savedProducts : [])];
+let products = [...defaultProducts, ...(Array.isArray(savedProducts) ? savedProducts.map(product => ({...product, image:product.image?.includes('images.unsplash.com') ? '' : product.image})) : [])];
 let activeFilter = 'ყველა';
 let searchTerm = '';
 let showOnlyFavorites = false;
@@ -37,7 +32,7 @@ function renderProducts(){
   else if(sort === 'price-high') visible.sort((a,b)=>b.price-a.price);
   else if(sort === 'newest') visible.sort((a,b)=>b.id-a.id);
   else visible.sort((a,b)=>a.featured-b.featured);
-  $('#product-grid').innerHTML = visible.map(product => `<article class="product-card"><div class="product-image-wrap"><img class="product-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.alt || product.name)}" loading="lazy" />${product.badge?`<span class="product-badge">${escapeHtml(product.badge)}</span>`:''}<button class="product-wish ${favorites.includes(product.id)?'active':''}" data-wish="${product.id}" aria-label="${favorites.includes(product.id)?'რჩეულებიდან ამოღება':'რჩეულებში დამატება'}">${favorites.includes(product.id)?'♥':'♡'}</button><button class="add-button" data-add="${product.id}">კალათაში დამატება ＋</button></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><span class="product-category">${escapeHtml(product.category)}</span></div><div class="product-price">${product.oldPrice?`<span class="old-price">${money(product.oldPrice)}</span>`:''}${money(product.price)}</div></div></article>`).join('');
+  $('#product-grid').innerHTML = visible.map(product => `<article class="product-card"><div class="product-image-wrap">${product.image?`<img class="product-image ${product.id===9?'product-image-contained':''}" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.alt || product.name)}" loading="lazy" />`:'<div class="product-placeholder" aria-hidden="true"></div>'}${product.badge?`<span class="product-badge">${escapeHtml(product.badge)}</span>`:''}<button class="product-wish ${favorites.includes(product.id)?'active':''}" data-wish="${product.id}" aria-label="${favorites.includes(product.id)?'რჩეულებიდან ამოღება':'რჩეულებში დამატება'}">${favorites.includes(product.id)?'♥':'♡'}</button><button class="add-button" data-add="${product.id}">კალათაში დამატება ＋</button></div><div class="product-info"><div><h3>${escapeHtml(product.name)}</h3><span class="product-category">${escapeHtml(product.category)}</span></div><div class="product-price">${product.oldPrice?`<span class="old-price">${money(product.oldPrice)}</span>`:''}${money(product.price)}</div></div></article>`).join('');
   $('#result-count').textContent = visible.length;
   $('#no-results').hidden = visible.length > 0;
 }
@@ -50,7 +45,7 @@ function renderCart(){
   $('#cart-count').textContent = count;
   $('#drawer-count').textContent = `(${count})`;
   $('#cart-total').textContent = money(total);
-  $('#cart-items').innerHTML = cart.map(item=>{const product=products.find(product=>product.id===item.id);return `<div class="cart-row"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.alt || product.name)}"/><div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category)}</p><div class="qty-control"><button data-qty="${product.id}" data-change="-1" aria-label="რაოდენობის შემცირება">−</button><span>${item.qty}</span><button data-qty="${product.id}" data-change="1" aria-label="რაოდენობის გაზრდა">＋</button></div></div><span class="cart-row-price">${money(product.price*item.qty)}</span></div>`}).join('');
+  $('#cart-items').innerHTML = cart.map(item=>{const product=products.find(product=>product.id===item.id);return `<div class="cart-row">${product.image?`<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.alt || product.name)}"/>`:'<div class="cart-image-placeholder" aria-hidden="true"></div>'}<div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category)}</p><div class="qty-control"><button data-qty="${product.id}" data-change="-1" aria-label="რაოდენობის შემცირება">−</button><span>${item.qty}</span><button data-qty="${product.id}" data-change="1" aria-label="რაოდენობის გაზრდა">＋</button></div></div><span class="cart-row-price">${money(product.price*item.qty)}</span></div>`}).join('');
   const empty = count===0;
   $('#cart-empty').classList.toggle('show',empty);
   $('#cart-footer').classList.toggle('hidden',empty);
@@ -74,15 +69,16 @@ function renderProfile(){
   $('#profile-product-list').innerHTML = ownedProducts.length ? ownedProducts.map(product => `<div class="profile-listing"><div><strong>${escapeHtml(product.name)}</strong><span>${money(product.price)} · ${escapeHtml(product.category)}</span></div><button type="button" data-remove-product="${product.id}">წაშლა</button></div>`).join('') : '<p class="profile-empty-list">ჯერ პროდუქტი არ დაგიმატებია.</p>';
 }
 
-function safeImageUrl(value, category){
-  if(!value) return categoryImages[category];
+function safeImageUrl(value){
+  if(!value) return '';
   try { const imageUrl = new URL(value); if(imageUrl.protocol === 'https:') return imageUrl.href; } catch {}
-  return categoryImages[category];
+  return '';
 }
 
 function saveOwnedProducts(){localStorage.setItem('yoko-products',JSON.stringify(products.filter(product=>product.owner)))}
 
 $('#open-profile').addEventListener('click',()=>{renderProfile();$('#profile-dialog').showModal()});
+$('#profile-logout').addEventListener('click',()=>{localStorage.removeItem('yoko-profile');location.href='index.html?view=login'});
 $('#profile-register-form').addEventListener('submit',event=>{
   event.preventDefault();
   const form = event.currentTarget;
