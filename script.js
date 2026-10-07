@@ -24,6 +24,7 @@ let showOnlyFavorites = false;
 let cart = readStored('yoko-cart', []);
 let favorites = readStored('yoko-favorites', []);
 let profile = null;
+let isStoreAdmin = false;
 let toastTimer;
 
 function renderProducts(){
@@ -65,6 +66,9 @@ function renderProfile(){
   if(!hasProfile) return;
   $('#profile-name').textContent = profile.name;
   $('#profile-email').textContent = profile.email;
+  $('#store-admin-panel').hidden = !isStoreAdmin;
+  $('#store-customer-note').hidden = isStoreAdmin;
+  if(!isStoreAdmin) return;
   const ownedProducts = products.filter(product => product.owner === profile.id || product.owner === profile.email);
   $('#profile-product-count').textContent = `(${ownedProducts.length})`;
   $('#profile-product-list').innerHTML = ownedProducts.length ? ownedProducts.map(product => `<div class="profile-listing"><div><strong>${escapeHtml(product.name)}</strong><span>${money(product.price)} · ${escapeHtml(product.category)}</span></div><button type="button" data-remove-product="${product.id}">წაშლა</button></div>`).join('') : '<p class="profile-empty-list">ჯერ პროდუქტი არ დაგიმატებია.</p>';
@@ -72,6 +76,13 @@ function renderProfile(){
 
 function mapServerProduct(row){return {id:Number(row.id),name:row.name,category:row.category,price:Number(row.price),oldPrice:row.old_price===null?null:Number(row.old_price),badge:row.badge||'ახალი',featured:Number(row.created_at?new Date(row.created_at).getTime():row.id),image:row.image_url||'',imagePath:row.image_path||'',alt:row.alt||row.name,owner:row.user_id,remote:true}}
 function saveOwnedProducts(){localStorage.setItem('yoko-products',JSON.stringify(products.filter(product=>product.owner&&!product.remote)))}
+async function loadStoreAdmin(userId){
+  isStoreAdmin=false;
+  const {data,error}=await supabaseClient.from('store_admins').select('user_id').eq('user_id',userId).maybeSingle();
+  if(error){console.error('Store admin access could not be checked:',error.message);return false}
+  isStoreAdmin=Boolean(data);
+  return isStoreAdmin;
+}
 
 async function uploadProductImage(file){
   if(!file)return {url:'',path:''};
@@ -86,7 +97,7 @@ async function uploadProductImage(file){
   return {url:data.publicUrl,path};
 }
 
-$('#open-profile').addEventListener('click',async()=>{const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};renderProfile();$('#profile-dialog').showModal()});
+$('#open-profile').addEventListener('click',async()=>{const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};await loadStoreAdmin(profile.id);renderProfile();$('#profile-dialog').showModal()});
 $('#profile-logout').addEventListener('click',async()=>{await supabaseClient.auth.signOut({scope:'local'});location.href='index.html?view=login'});
 
 const productImageInput=$('#product-image-file');
@@ -103,7 +114,7 @@ productImageInput.addEventListener('change',()=>{
 
 $('#product-form').addEventListener('submit',async event=>{
   event.preventDefault();
-  if(!profile||!supabaseClient){showToast('პროდუქტის დასამატებლად სერვერზე შესვლა აუცილებელია');return}
+  if(!profile||!supabaseClient||!isStoreAdmin){showToast('პროდუქტის დამატება მხოლოდ მაღაზიის მფლობელს შეუძლია');return}
   const form = event.currentTarget;
   const data = new FormData(form);
   const name = String(data.get('name')).trim();
@@ -127,6 +138,7 @@ $('#product-form').addEventListener('submit',async event=>{
 $('#profile-product-list').addEventListener('click',async event=>{
   const button = event.target.closest('[data-remove-product]');
   if(!button) return;
+  if(!isStoreAdmin){showToast('პროდუქტის წაშლა მხოლოდ მაღაზიის მფლობელს შეუძლია');return}
   const id = Number(button.dataset.removeProduct);
   const product=products.find(item=>item.id===id);
   if(product?.remote){
@@ -170,6 +182,7 @@ async function initializeStore(){
   if(sessionError||!sessionData.session){location.replace('index.html');return}
   const user=sessionData.session.user;
   profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
+  await loadStoreAdmin(profile.id);
   const {data:rows,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});
   if(error)showToast('სერვერის კატალოგის ჩატვირთვა ვერ მოხერხდა');
   else{
