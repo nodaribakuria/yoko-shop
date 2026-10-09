@@ -13,6 +13,7 @@ const defaultProducts = [
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const money = amount => `${amount.toLocaleString('ka-GE')} ₾`;
+const shippingFor = subtotal => subtotal >= 150 ? 0 : 10;
 const readStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const supabaseClient = window.yokoSupabase;
@@ -43,17 +44,20 @@ function persistCart(){localStorage.setItem('yoko-cart',JSON.stringify(cart));re
 function renderCart(){
   cart = cart.filter(item => products.some(product => product.id === item.id));
   const count = cart.reduce((sum,item)=>sum+item.qty,0);
-  const total = cart.reduce((sum,item)=>sum+products.find(product=>product.id===item.id).price*item.qty,0);
+  const subtotal = cart.reduce((sum,item)=>sum+products.find(product=>product.id===item.id).price*item.qty,0);
+  const shipping = count ? shippingFor(subtotal) : 0;
   $('#cart-count').textContent = count;
   $('#drawer-count').textContent = `(${count})`;
-  $('#cart-total').textContent = money(total);
+  $('#cart-subtotal').textContent = money(subtotal);
+  $('#cart-shipping').textContent = shipping ? money(shipping) : 'უფასო';
+  $('#cart-total').textContent = money(subtotal + shipping);
   $('#cart-items').innerHTML = cart.map(item=>{const product=products.find(product=>product.id===item.id);return `<div class="cart-row">${product.image?`<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.alt || product.name)}"/>`:'<div class="cart-image-placeholder" aria-hidden="true"></div>'}<div><h3>${escapeHtml(product.name)}</h3><p>${escapeHtml(product.category)}</p><div class="qty-control"><button data-qty="${product.id}" data-change="-1" aria-label="რაოდენობის შემცირება">−</button><span>${item.qty}</span><button data-qty="${product.id}" data-change="1" aria-label="რაოდენობის გაზრდა">＋</button></div></div><span class="cart-row-price">${money(product.price*item.qty)}</span></div>`}).join('');
   const empty = count===0;
   $('#cart-empty').classList.toggle('show',empty);
   $('#cart-footer').classList.toggle('hidden',empty);
-  const remaining = Math.max(0,150-total);
-  $('#shipping-message').textContent = remaining ? `კიდევ ${money(remaining)} და მიწოდება უფასოა` : 'გილოცავ! მიწოდება უფასოა';
-  $('#shipping-bar').style.width = `${Math.min(100,total/150*100)}%`;
+  const remaining = Math.max(0,150-subtotal);
+  $('#shipping-message').textContent = count ? (remaining ? `კიდევ ${money(remaining)} და მიწოდება უფასოა` : 'გილოცავ! მიწოდება უფასოა') : '150 ₾-დან მიწოდება უფასოა';
+  $('#shipping-bar').style.width = `${Math.min(100,subtotal/150*100)}%`;
 }
 
 function showToast(message){const toast=$('#toast');toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2100)}
@@ -68,6 +72,7 @@ function renderProfile(){
   $('#profile-email').textContent = profile.email;
   $('#store-admin-panel').hidden = !isStoreAdmin;
   $('#store-customer-note').hidden = isStoreAdmin;
+  $('#customer-orders-panel').hidden = isStoreAdmin;
   if(!isStoreAdmin) return;
   const ownedProducts = products.filter(product => product.owner === profile.id || product.owner === profile.email);
   $('#profile-product-count').textContent = `(${ownedProducts.length})`;
@@ -97,7 +102,7 @@ async function uploadProductImage(file){
   return {url:data.publicUrl,path};
 }
 
-$('#open-profile').addEventListener('click',async()=>{if(!supabaseClient){location.href='index.html?view=login';return}const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};await loadStoreAdmin(profile.id);renderProfile();if(isStoreAdmin)await loadAdminOrders();$('#profile-dialog').showModal()});
+$('#open-profile').addEventListener('click',async()=>{if(!supabaseClient){location.href='index.html?view=login';return}const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};await loadStoreAdmin(profile.id);renderProfile();if(isStoreAdmin)await loadAdminOrders();else await loadCustomerOrders();$('#profile-dialog').showModal()});
 $('#profile-logout').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut({scope:'local'});location.href='index.html?view=login'});
 
 const productImageInput=$('#product-image-file');
@@ -170,7 +175,6 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape')closeCart()}
 $('.search-toggle').addEventListener('click',()=>{$('#shop').scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#product-search').focus(),450)});
 $('.wishlist-shortcut').addEventListener('click',()=>{showOnlyFavorites=true;activeFilter='ყველა';searchTerm='';$('#product-search').value='';renderProducts();$('#shop').scrollIntoView({behavior:'smooth'});showToast(favorites.length?`რჩეულებში ${favorites.length} პროდუქტია`:'რჩეულებში ჯერ პროდუქტი არ არის')});
 $('.menu-toggle').addEventListener('click',()=>{const existing=$('.mobile-nav');if(existing){existing.remove();return}const nav=document.createElement('nav');nav.className='mobile-nav';nav.innerHTML='<a href="#shop">მაღაზია</a><a href="#categories">კატეგორიები</a><a href="#story">ჩვენ შესახებ</a>';$('.site-header').after(nav);nav.addEventListener('click',event=>{if(event.target.closest('a'))nav.remove()})});
-$('#newsletter-form').addEventListener('submit',event=>{event.preventDefault();$('#newsletter-message').textContent='მადლობა გამოწერისთვის! სიახლე მალე შეგხვდება.';$('#newsletter-email').value=''});
 async function requireProfileForPurchase(){
   if(!supabaseClient){showToast('შეკვეთის გასაფორმებლად მომხმარებლის ანგარიშია საჭირო');location.href='index.html?view=login&next=checkout';return false}
   const {data,error}=await supabaseClient.auth.getSession();
@@ -179,7 +183,21 @@ async function requireProfileForPurchase(){
   profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
   return true;
 }
-$('#checkout-button').addEventListener('click',async()=>{if(!cart.length){showToast('კალათა ცარიელია');return}if(!await requireProfileForPurchase())return;$('#checkout-dialog').showModal()});
+function updateCheckoutSummary(){
+  const subtotal=cart.reduce((sum,item)=>sum+(products.find(product=>product.id===item.id)?.price||0)*item.qty,0);
+  const shipping=cart.length?shippingFor(subtotal):0;
+  $('#checkout-subtotal').textContent=money(subtotal);
+  $('#checkout-shipping').textContent=shipping?money(shipping):'უფასო';
+  $('#checkout-total').textContent=money(subtotal+shipping);
+}
+function prefillCheckout(){
+  const nameField=$('#checkout-form [name="name"]');
+  const phoneField=$('#checkout-form [name="phone"]');
+  if(profile?.name&&!nameField.value&&profile.name!==profile.email)nameField.value=profile.name;
+  if(profile?.phone&&!phoneField.value)phoneField.value=profile.phone;
+  updateCheckoutSummary();
+}
+$('#checkout-button').addEventListener('click',async()=>{if(!cart.length){showToast('კალათა ცარიელია');return}if(!await requireProfileForPurchase())return;prefillCheckout();$('#checkout-dialog').showModal()});
 $('#checkout-form').addEventListener('submit',async event=>{
   event.preventDefault();
   if(!await requireProfileForPurchase())return;
@@ -188,11 +206,12 @@ $('#checkout-form').addEventListener('submit',async event=>{
   submitButton.disabled=true;
   try{
     const values=new FormData(event.currentTarget);
-    const orderItems=cart.map(item=>{const product=products.find(entry=>entry.id===item.id);if(!product)throw new Error('კალათაში მოძველებული პროდუქტი აღმოჩნდა. განაახლე გვერდი.');return {product_id:item.id,name:product.name,unit_price:product.price,quantity:item.qty}});
-    const total=orderItems.reduce((sum,item)=>sum+item.unit_price*item.quantity,0);
-    const {data,error}=await supabaseClient.from('orders').insert({user_id:profile.id,customer_name:String(values.get('name')).trim(),customer_phone:String(values.get('phone')).trim(),shipping_address:String(values.get('address')).trim(),items:orderItems,total}).select('id').single();
-    if(error)throw new Error('შეკვეთა ვერ შეინახა. სცადე მოგვიანებით ან დაუკავშირდი მაღაზიის მფლობელს.');
-    $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data.id}`;
+    const paymentMethod=String(values.get('paymentMethod')||'cash_on_delivery');
+    if(paymentMethod!=='cash_on_delivery')throw new Error('ონლაინ ბარათით გადახდა ჯერ არ არის ჩართული. აირჩიე მიტანისას გადახდა.');
+    const orderItems=cart.map(item=>({id:item.id,quantity:item.qty}));
+    const {data,error}=await supabaseClient.rpc('place_order',{p_customer_name:String(values.get('name')).trim(),p_customer_phone:String(values.get('phone')).trim(),p_shipping_address:String(values.get('address')).trim(),p_items:orderItems});
+    if(error)throw new Error('შეკვეთა ვერ შეინახა. გადაამოწმე Supabase-ის განახლებული SQL და სცადე ხელახლა.');
+    $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data}`;
     $('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart();
   }catch(error){showToast(error.message||'შეკვეთა ვერ შეინახა')}
   finally{submitButton.disabled=false}
@@ -209,10 +228,38 @@ async function loadAdminOrders(){
   $('#store-order-list').innerHTML=data.map(order=>{
     const lines=(Array.isArray(order.items)?order.items:[]).map(item=>`<li>${escapeHtml(item.name)} × ${Number(item.quantity)||0} — ${money(Number(item.unit_price||0)*(Number(item.quantity)||0))}</li>`).join('');
     const date=new Date(order.created_at).toLocaleString('ka-GE');
-    return `<article class="store-order"><div class="store-order-heading"><strong>${escapeHtml(order.customer_name)}</strong><span>${escapeHtml(order.status)}</span></div><p>${escapeHtml(order.customer_phone)} · ${escapeHtml(order.shipping_address)}</p><ul>${lines}</ul><div class="store-order-total"><time>${escapeHtml(date)}</time><strong>${money(Number(order.total)||0)}</strong></div><small class="store-order-id">${escapeHtml(order.id)}</small></article>`;
+    const options=['ახალი','დამუშავებაში','გაგზავნილი','დასრულებული','გაუქმებული'].map(status=>`<option value="${status}" ${order.status===status?'selected':''}>${status}</option>`).join('');
+    const shippingFee=Number(order.shipping_fee)||0;
+    return `<article class="store-order"><div class="store-order-heading"><strong>${escapeHtml(order.customer_name)}</strong><span>${escapeHtml(order.status)}</span></div><p>${escapeHtml(order.customer_phone)} · ${escapeHtml(order.customer_email||'ელფოსტა არ არის მითითებული')} · ${escapeHtml(order.shipping_address)}</p><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(date)}</time><strong>${money(Number(order.total)||0)}</strong></div><small class="store-order-id">${escapeHtml(order.id)}</small><form class="store-order-status-form" data-order-id="${escapeHtml(order.id)}"><label>შეკვეთის სტატუსი<select name="status">${options}</select></label><button type="submit" class="button button-outline">შენახვა</button></form></article>`;
   }).join('');
 }
 $('#refresh-orders').addEventListener('click',loadAdminOrders);
+$('#store-order-list').addEventListener('submit',async event=>{
+  const form=event.target.closest('.store-order-status-form');
+  if(!form)return;
+  event.preventDefault();
+  if(!isStoreAdmin)return;
+  const button=form.querySelector('button');
+  button.disabled=true;
+  const {error}=await supabaseClient.from('orders').update({status:form.elements.status.value}).eq('id',form.dataset.orderId);
+  if(error)showToast('სტატუსი ვერ შეინახა. გადაამოწმე Supabase-ის განახლებული SQL.');
+  else{showToast('შეკვეთის სტატუსი განახლდა');await loadAdminOrders()}
+  button.disabled=false;
+});
+async function loadCustomerOrders(){
+  if(!supabaseClient||!profile)return;
+  const message=$('#customer-orders-message');
+  message.textContent='შეკვეთები იტვირთება…';
+  const {data,error}=await supabaseClient.from('orders').select('id,items,total,shipping_fee,payment_method,status,created_at').eq('user_id',profile.id).order('created_at',{ascending:false}).limit(50);
+  if(error){message.textContent='შეკვეთების ისტორია ვერ ჩაიტვირთა.';$('#customer-order-list').innerHTML='';return}
+  message.textContent=data.length?`შენი შეკვეთები: ${data.length}`:'შეკვეთები ჯერ არ გაქვს.';
+  $('#customer-order-list').innerHTML=data.map(order=>{
+    const lines=(Array.isArray(order.items)?order.items:[]).map(item=>`<li>${escapeHtml(item.name)} × ${Number(item.quantity)||0} — ${money(Number(item.unit_price||0)*(Number(item.quantity)||0))}</li>`).join('');
+    const shippingFee=Number(order.shipping_fee)||0;
+    return `<article class="store-order"><div class="store-order-heading"><strong>შეკვეთა ${escapeHtml(order.id.slice(0,8))}</strong><span>${escapeHtml(order.status)}</span></div><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(new Date(order.created_at).toLocaleString('ka-GE'))}</time><strong>${money(Number(order.total)||0)}</strong></div></article>`;
+  }).join('');
+}
+$('#refresh-customer-orders').addEventListener('click',loadCustomerOrders);
 
 async function initializeStore(){
   if(supabaseClient){
@@ -223,9 +270,9 @@ async function initializeStore(){
       await loadStoreAdmin(profile.id);
     }
     const {data:rows,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});
-    if(!error&&rows){const local=products.filter(product=>!product.remote);products=[...local,...rows.map(mapServerProduct)]}
+    if(!error&&rows){const local=products.filter(product=>!product.remote&&!rows.some(row=>Number(row.id)===product.id));products=[...local,...rows.map(mapServerProduct)]}
   }
   renderProducts();renderCart();renderProfile();
-  if(new URLSearchParams(location.search).get('checkout')==='1'&&profile&&cart.length)$('#checkout-dialog').showModal();
+  if(new URLSearchParams(location.search).get('checkout')==='1'&&profile&&cart.length){prefillCheckout();$('#checkout-dialog').showModal()}
 }
 initializeStore();
