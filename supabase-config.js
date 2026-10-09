@@ -9,6 +9,14 @@ window.yokoSupabaseConfigured = false;
 if (window.supabase?.createClient &&
     !YOKO_SUPABASE_URL.includes('YOUR_PROJECT_ID') &&
     !YOKO_SUPABASE_PUBLIC_KEY.includes('YOUR_SUPABASE_')) {
-  window.yokoSupabase = window.supabase.createClient(YOKO_SUPABASE_URL, YOKO_SUPABASE_PUBLIC_KEY);
+  // Keep Supabase's refreshable session in this browser; never store the password.
+  window.yokoSupabase = window.supabase.createClient(YOKO_SUPABASE_URL, YOKO_SUPABASE_PUBLIC_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  });
   window.yokoSupabaseConfigured = true;
 }

@@ -67,6 +67,34 @@ create policy "Store admins delete their own products" on public.products
     )
   );
 
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  customer_name text not null,
+  customer_phone text not null,
+  shipping_address text not null,
+  items jsonb not null check (jsonb_typeof(items) = 'array' and jsonb_array_length(items) > 0),
+  total numeric(10,2) not null check (total > 0),
+  status text not null default 'ახალი' check (status in ('ახალი', 'დამუშავებაში', 'გაგზავნილი', 'დასრულებული', 'გაუქმებული')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.orders enable row level security;
+grant select, insert on public.orders to authenticated;
+revoke update, delete on public.orders from anon, authenticated;
+
+drop policy if exists "Customers create their own orders" on public.orders;
+create policy "Customers create their own orders" on public.orders
+  for insert to authenticated with check (auth.uid() = user_id and status = 'ახალი');
+
+drop policy if exists "Customers and store admins read orders" on public.orders;
+create policy "Customers and store admins read orders" on public.orders
+  for select to authenticated using (
+    auth.uid() = user_id or exists (
+      select 1 from public.store_admins where user_id = auth.uid()
+    )
+  );
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('product-images', 'product-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 on conflict (id) do update set

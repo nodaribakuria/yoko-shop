@@ -10,6 +10,8 @@
   const registerTab = document.querySelector('#register-tab');
   const loginTab = document.querySelector('#login-tab');
   const isLoginRoute = new URLSearchParams(location.search).get('view') === 'login';
+  const nextStep = new URLSearchParams(location.search).get('next');
+  const storeUrl = nextStep === 'checkout' ? 'shop.html?checkout=1' : 'shop.html';
 
   function showView(view) {
     const login = view === 'login';
@@ -42,7 +44,7 @@
   }
 
   client.auth.getSession().then(({data}) => {
-    if (data.session && !isLoginRoute) location.replace('shop.html');
+    if (data.session && (!isLoginRoute || nextStep === 'checkout')) location.replace(storeUrl);
   });
 
   registrationForm.addEventListener('submit', async event => {
@@ -62,12 +64,12 @@
         password,
         options: {
           data: {full_name: name, phone},
-          emailRedirectTo: new URL('shop.html', location.href).href
+          emailRedirectTo: new URL(storeUrl, location.href).href
         }
       });
       if (error) return showError(registrationError, 'რეგისტრაცია ვერ შესრულდა. გადაამოწმე ელფოსტა და პაროლი.');
       if (data.session) {
-        location.href = 'shop.html';
+        location.href = storeUrl;
         return;
       }
       showView('login');
@@ -87,7 +89,7 @@
     try {
       const {error} = await client.auth.signInWithPassword({email, password});
       if (error) return showError(loginError, 'შესვლა ვერ მოხერხდა. გადაამოწმე ელფოსტა და პაროლი.');
-      location.href = 'shop.html';
+      location.href = storeUrl;
     } catch {
       showError(loginError, 'სერვერთან დაკავშირება ვერ მოხერხდა. სცადე მოგვიანებით.');
     }

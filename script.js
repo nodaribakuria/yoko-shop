@@ -97,8 +97,8 @@ async function uploadProductImage(file){
   return {url:data.publicUrl,path};
 }
 
-$('#open-profile').addEventListener('click',async()=>{const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};await loadStoreAdmin(profile.id);renderProfile();$('#profile-dialog').showModal()});
-$('#profile-logout').addEventListener('click',async()=>{await supabaseClient.auth.signOut({scope:'local'});location.href='index.html?view=login'});
+$('#open-profile').addEventListener('click',async()=>{if(!supabaseClient){location.href='index.html?view=login';return}const {data}=await supabaseClient.auth.getSession();if(!data.session){location.href='index.html?view=login';return}profile={id:data.session.user.id,name:data.session.user.user_metadata.full_name||data.session.user.email,email:data.session.user.email,phone:data.session.user.user_metadata.phone||''};await loadStoreAdmin(profile.id);renderProfile();if(isStoreAdmin)await loadAdminOrders();$('#profile-dialog').showModal()});
+$('#profile-logout').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut({scope:'local'});location.href='index.html?view=login'});
 
 const productImageInput=$('#product-image-file');
 let productPreviewUrl='';
@@ -171,24 +171,61 @@ $('.search-toggle').addEventListener('click',()=>{$('#shop').scrollIntoView({beh
 $('.wishlist-shortcut').addEventListener('click',()=>{showOnlyFavorites=true;activeFilter='ყველა';searchTerm='';$('#product-search').value='';renderProducts();$('#shop').scrollIntoView({behavior:'smooth'});showToast(favorites.length?`რჩეულებში ${favorites.length} პროდუქტია`:'რჩეულებში ჯერ პროდუქტი არ არის')});
 $('.menu-toggle').addEventListener('click',()=>{const existing=$('.mobile-nav');if(existing){existing.remove();return}const nav=document.createElement('nav');nav.className='mobile-nav';nav.innerHTML='<a href="#shop">მაღაზია</a><a href="#categories">კატეგორიები</a><a href="#story">ჩვენ შესახებ</a>';$('.site-header').after(nav);nav.addEventListener('click',event=>{if(event.target.closest('a'))nav.remove()})});
 $('#newsletter-form').addEventListener('submit',event=>{event.preventDefault();$('#newsletter-message').textContent='მადლობა გამოწერისთვის! სიახლე მალე შეგხვდება.';$('#newsletter-email').value=''});
-function requireProfileForPurchase(){if(profile&&profile.name&&profile.email)return true;window.location.href='index.html';return false}
-$('#checkout-button').addEventListener('click',()=>{if(!requireProfileForPurchase())return;$('#checkout-dialog').showModal()});
-$('#checkout-form').addEventListener('submit',event=>{event.preventDefault();if(!requireProfileForPurchase())return;$('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart()});
+async function requireProfileForPurchase(){
+  if(!supabaseClient){showToast('შეკვეთის გასაფორმებლად მომხმარებლის ანგარიშია საჭირო');location.href='index.html?view=login&next=checkout';return false}
+  const {data,error}=await supabaseClient.auth.getSession();
+  if(error||!data.session){location.href='index.html?view=login&next=checkout';return false}
+  const user=data.session.user;
+  profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
+  return true;
+}
+$('#checkout-button').addEventListener('click',async()=>{if(!cart.length){showToast('კალათა ცარიელია');return}if(!await requireProfileForPurchase())return;$('#checkout-dialog').showModal()});
+$('#checkout-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!await requireProfileForPurchase())return;
+  if(!cart.length){showToast('კალათა ცარიელია');return}
+  const submitButton=$('#checkout-form button[type="submit"]');
+  submitButton.disabled=true;
+  try{
+    const values=new FormData(event.currentTarget);
+    const orderItems=cart.map(item=>{const product=products.find(entry=>entry.id===item.id);if(!product)throw new Error('კალათაში მოძველებული პროდუქტი აღმოჩნდა. განაახლე გვერდი.');return {product_id:item.id,name:product.name,unit_price:product.price,quantity:item.qty}});
+    const total=orderItems.reduce((sum,item)=>sum+item.unit_price*item.quantity,0);
+    const {data,error}=await supabaseClient.from('orders').insert({user_id:profile.id,customer_name:String(values.get('name')).trim(),customer_phone:String(values.get('phone')).trim(),shipping_address:String(values.get('address')).trim(),items:orderItems,total}).select('id').single();
+    if(error)throw new Error('შეკვეთა ვერ შეინახა. სცადე მოგვიანებით ან დაუკავშირდი მაღაზიის მფლობელს.');
+    $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data.id}`;
+    $('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart();
+  }catch(error){showToast(error.message||'შეკვეთა ვერ შეინახა')}
+  finally{submitButton.disabled=false}
+});
 $('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;closeCart()});
 
+async function loadAdminOrders(){
+  if(!supabaseClient||!isStoreAdmin)return;
+  const message=$('#store-orders-message');
+  message.textContent='შეკვეთები იტვირთება…';
+  const {data,error}=await supabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(100);
+  if(error){message.textContent='შეკვეთების ჩატვირთვა ვერ მოხერხდა. გადაამოწმე, რომ Supabase-ის განახლებული SQL დაყენებულია.';$('#store-order-list').innerHTML='';return}
+  message.textContent=data.length?`ბოლო ${data.length} შეკვეთა`:'შეკვეთები ჯერ არ არის.';
+  $('#store-order-list').innerHTML=data.map(order=>{
+    const lines=(Array.isArray(order.items)?order.items:[]).map(item=>`<li>${escapeHtml(item.name)} × ${Number(item.quantity)||0} — ${money(Number(item.unit_price||0)*(Number(item.quantity)||0))}</li>`).join('');
+    const date=new Date(order.created_at).toLocaleString('ka-GE');
+    return `<article class="store-order"><div class="store-order-heading"><strong>${escapeHtml(order.customer_name)}</strong><span>${escapeHtml(order.status)}</span></div><p>${escapeHtml(order.customer_phone)} · ${escapeHtml(order.shipping_address)}</p><ul>${lines}</ul><div class="store-order-total"><time>${escapeHtml(date)}</time><strong>${money(Number(order.total)||0)}</strong></div><small class="store-order-id">${escapeHtml(order.id)}</small></article>`;
+  }).join('');
+}
+$('#refresh-orders').addEventListener('click',loadAdminOrders);
+
 async function initializeStore(){
-  if(!supabaseClient){location.replace('index.html');return}
-  const {data:sessionData,error:sessionError}=await supabaseClient.auth.getSession();
-  if(sessionError||!sessionData.session){location.replace('index.html');return}
-  const user=sessionData.session.user;
-  profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
-  await loadStoreAdmin(profile.id);
-  const {data:rows,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});
-  if(error)showToast('სერვერის კატალოგის ჩატვირთვა ვერ მოხერხდა');
-  else{
-    const local=products.filter(product=>!product.remote);
-    products=[...local,...rows.map(mapServerProduct)];
+  if(supabaseClient){
+    const {data:sessionData}=await supabaseClient.auth.getSession();
+    if(sessionData.session){
+      const user=sessionData.session.user;
+      profile={id:user.id,name:user.user_metadata.full_name||user.email,email:user.email,phone:user.user_metadata.phone||''};
+      await loadStoreAdmin(profile.id);
+    }
+    const {data:rows,error}=await supabaseClient.from('products').select('*').order('created_at',{ascending:false});
+    if(!error&&rows){const local=products.filter(product=>!product.remote);products=[...local,...rows.map(mapServerProduct)]}
   }
   renderProducts();renderCart();renderProfile();
+  if(new URLSearchParams(location.search).get('checkout')==='1'&&profile&&cart.length)$('#checkout-dialog').showModal();
 }
 initializeStore();

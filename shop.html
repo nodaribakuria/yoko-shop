@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="supabase-config.js" defer></script>
-    <script src="auth-guard.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body>
@@ -98,9 +97,14 @@
             <button class="button button-dark" type="submit">პროდუქტის დამატება <span>＋</span></button>
           </form>
           <div class="profile-listings"><h3 class="profile-section-title">ჩემი დამატებული პროდუქტები <span id="profile-product-count">(0)</span></h3><div id="profile-product-list"></div></div>
+          <section class="profile-listings store-orders-panel" id="store-orders-panel">
+            <div class="store-orders-heading"><h3 class="profile-section-title">მომხმარებლების შეკვეთები</h3><button class="button button-outline" id="refresh-orders" type="button">განახლება ↻</button></div>
+            <p class="profile-hint" id="store-orders-message">შეკვეთების სია ჩაიტვირთება.</p>
+            <div id="store-order-list" aria-live="polite"></div>
+          </section>
         </section>
       </section>
     </dialog>
-    <dialog class="checkout-dialog" id="checkout-dialog"><form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="დახურვა">×</button></form><p class="eyebrow">ბოლო ნაბიჯი</p><h2>შეკვეთის <em>დასრულება</em></h2><p class="checkout-note">შეავსე საკონტაქტო ინფორმაცია. ეს დემო ვერსიაა და შეკვეთის მონაცემები საიტიდან არსად იგზავნება.</p><form id="checkout-form" class="checkout-form"><label>სახელი და გვარი<input name="name" required placeholder="მაგ. ნინო ბერიძე" /></label><label>ტელეფონი<input name="phone" type="tel" required placeholder="+995 5XX XX XX XX" /></label><label>მიწოდების მისამართი<textarea name="address" required rows="2" placeholder="ქალაქი, ქუჩა, სახლის ნომერი"></textarea></label><button class="button button-dark" type="submit">შეკვეთის დადასტურება <span>↗</span></button></form><div class="order-confirmation" id="order-confirmation" hidden><span>✳</span><h3>მადლობა!</h3><p>შეკვეთის დემო გაფორმება დასრულდა.</p><button class="button button-outline" id="finish-order">დახურვა</button></div></dialog>
+    <dialog class="checkout-dialog" id="checkout-dialog"><form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="დახურვა">×</button></form><p class="eyebrow">ბოლო ნაბიჯი</p><h2>შეკვეთის <em>დასრულება</em></h2><p class="checkout-note">მიუთითე საკონტაქტო ინფორმაცია და მიწოდების მისამართი. მონაცემები შეკვეთის დასამუშავებლად შეინახება და მაღაზიის მფლობელს ეჩვენება.</p><form id="checkout-form" class="checkout-form"><label>სახელი და გვარი<input name="name" required maxlength="120" placeholder="მაგ. ნინო ბერიძე" /></label><label>ტელეფონი<input name="phone" type="tel" required maxlength="40" placeholder="+995 5XX XX XX XX" /></label><label>მიწოდების მისამართი<textarea name="address" required maxlength="500" rows="2" placeholder="ქალაქი, ქუჩა, სახლის ნომერი"></textarea></label><button class="button button-dark" type="submit">შეკვეთის დადასტურება <span>↗</span></button></form><div class="order-confirmation" id="order-confirmation" hidden><span>✳</span><h3>შეკვეთა მიღებულია</h3><p id="order-confirmation-number"></p><p>მაღაზიის მფლობელი შეკვეთაზე დასაკავშირებლად გამოიყენებს მითითებულ ინფორმაციას.</p><button class="button button-outline" id="finish-order">დახურვა</button></div></dialog>
   </body>
 </html>
