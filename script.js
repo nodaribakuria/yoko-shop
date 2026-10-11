@@ -7,7 +7,17 @@ const defaultProducts = [
   {id:5,name:'რბილი ნაქსოვი სვიტერი',category:'ტანსაცმელი',price:139,oldPrice:null,badge:'',featured:5,image:'',alt:'ნაქსოვი ღია ფერის სვიტერი'},
   {id:6,name:'ყავის ჭიქა — Terra',category:'ნივთები',price:38,oldPrice:null,badge:'ხელნაკეთი',featured:6,image:'',alt:'კერამიკის ყავის ჭიქა'},
   {id:7,name:'სათვალე Soleil',category:'აქსესუარები',price:72,oldPrice:null,badge:'',featured:7,image:'',alt:'მზის სათვალე'},
-  {id:8,name:'სურნელოვანი სანთელი',category:'ნივთები',price:45,oldPrice:null,badge:'',featured:8,image:'',alt:'სურნელოვანი სანთელი'}
+  {id:8,name:'სურნელოვანი სანთელი',category:'ნივთები',price:45,oldPrice:null,badge:'',featured:8,image:'',alt:'სურნელოვანი სანთელი'},
+  {id:1001,name:'გულის პრინტიანი ფუმფულა ხალათი',category:'ტანსაცმელი',price:59,oldPrice:null,badge:'ახალი',featured:9,image:'products/pink-heart-robe.jpg',alt:'თეთრი ფუმფულა ხალათი ვარდისფერი გულებით'},
+  {id:1002,name:'ლურჯი ფუმფულა ჰუდი-ხალათი',category:'ტანსაცმელი',price:65,oldPrice:null,badge:'ახალი',featured:10,image:'products/blue-plush-hoodie.jpg',alt:'ლურჯი რბილი ჰუდი-ხალათი'},
+  {id:1003,name:'შავი ფუმფულა ჰუდი-ხალათი',category:'ტანსაცმელი',price:65,oldPrice:null,badge:'',featured:11,image:'products/black-plush-hoodie.jpg',alt:'შავი რბილი ჰუდი-ხალათი'},
+  {id:1004,name:'ძაღლების პრინტიანი ხალათი',category:'ტანსაცმელი',price:55,oldPrice:null,badge:'ახალი',featured:12,image:'products/blue-dog-print-robe.jpg',alt:'ლურჯი ხალათი ძაღლების ნახატებით'},
+  {id:1005,name:'წითელ-შავი კუბოკრული ხალათი',category:'ტანსაცმელი',price:59,oldPrice:null,badge:'',featured:13,image:'products/red-plaid-robe.jpg',alt:'წითელ-შავი კუბოკრული რბილი ხალათი'},
+  {id:1006,name:'ვარდისფერი ფლისის ხალათი',category:'ტანსაცმელი',price:59,oldPrice:null,badge:'ახალი',featured:14,image:'products/pink-fleece-robe.jpg',alt:'ღია ვარდისფერი ფლისის ხალათი თეთრი საყელოთი'},
+  {id:1007,name:'ვარდისფერი ჰუდი-პონჩო',category:'ტანსაცმელი',price:55,oldPrice:null,badge:'',featured:15,image:'products/pink-hoodie.jpg',alt:'ვარდისფერი რბილი ჰუდი-პონჩო ჯიბით'},
+  {id:1008,name:'ნაცრისფერი რბილი ხალათი',category:'ტანსაცმელი',price:65,oldPrice:null,badge:'',featured:16,image:'products/light-gray-robe.jpg',alt:'ღია ნაცრისფერი რბილი ხალათი'},
+  {id:1009,name:'შავი კლასიკური პალტო',category:'ტანსაცმელი',price:70,oldPrice:null,badge:'',featured:17,image:'products/black-coat.jpg',alt:'შავი კლასიკური საყელოიანი პალტო'},
+  {id:1010,name:'ლურჯ-ნაცრისფერი ფუმფულა ხალათი',category:'ტანსაცმელი',price:65,oldPrice:null,badge:'ახალი',featured:18,image:'products/blue-gray-robe.jpg',alt:'ლურჯ-ნაცრისფერი ფუმფულა ხალათი კაპიუშონით'}
 ];
 
 const $ = (selector, root=document) => root.querySelector(selector);
@@ -212,11 +222,17 @@ $('#checkout-form').addEventListener('submit',async event=>{
     const {data,error}=await supabaseClient.rpc('place_order',{p_customer_name:String(values.get('name')).trim(),p_customer_phone:String(values.get('phone')).trim(),p_shipping_address:String(values.get('address')).trim(),p_items:orderItems});
     if(error)throw new Error('შეკვეთა ვერ შეინახა. გადაამოწმე Supabase-ის განახლებული SQL და სცადე ხელახლა.');
     $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data}`;
+    const emailNotice=$('#order-email-notice');
+    emailNotice.textContent='';
+    emailNotice.hidden=false;
+    let emailError=null;
+    try{({error:emailError}=await supabaseClient.functions.invoke('send-order-notification',{body:{orderId:data}}))}catch{emailError=new Error('notification failed')}
+    emailNotice.textContent=emailError?'შეკვეთა შენახულია, მაგრამ ელფოსტა ვერ გაიგზავნა. მფლობელს შეკვეთა პროფილში შეუძლია ნახოს.':'შეკვეთის დეტალები მაღაზიის ელფოსტაზე გაიგზავნა.';
     $('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart();
   }catch(error){showToast(error.message||'შეკვეთა ვერ შეინახა')}
   finally{submitButton.disabled=false}
 });
-$('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;closeCart()});
+$('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;$('#order-email-notice').textContent='';$('#order-email-notice').hidden=true;closeCart()});
 
 async function loadAdminOrders(){
   if(!supabaseClient||!isStoreAdmin)return;

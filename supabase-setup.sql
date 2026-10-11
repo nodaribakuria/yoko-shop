@@ -106,6 +106,21 @@ insert into public.default_order_catalog (id, name, price) values
   (8, 'სურნელოვანი სანთელი', 45)
 on conflict (id) do update set name = excluded.name, price = excluded.price, active = true;
 
+-- Clothing added from the owner's supplied product photos. Keep these prices
+-- in sync with the matching entries in script.js so server totals are trusted.
+insert into public.default_order_catalog (id, name, price) values
+  (1001, 'გულის პრინტიანი ფუმფულა ხალათი', 59),
+  (1002, 'ლურჯი ფუმფულა ჰუდი-ხალათი', 65),
+  (1003, 'შავი ფუმფულა ჰუდი-ხალათი', 65),
+  (1004, 'ძაღლების პრინტიანი ხალათი', 55),
+  (1005, 'წითელ-შავი კუბოკრული ხალათი', 59),
+  (1006, 'ვარდისფერი ფლისის ხალათი', 59),
+  (1007, 'ვარდისფერი ჰუდი-პონჩო', 55),
+  (1008, 'ნაცრისფერი რბილი ხალათი', 65),
+  (1009, 'შავი კლასიკური პალტო', 70),
+  (1010, 'ლურჯ-ნაცრისფერი ფუმფულა ხალათი', 65)
+on conflict (id) do update set name = excluded.name, price = excluded.price, active = true;
+
 -- Extend an existing orders table safely when this setup is run again.
 alter table public.orders add column if not exists shipping_fee numeric(10,2) not null default 0 check (shipping_fee >= 0);
 alter table public.orders add column if not exists payment_method text not null default 'cash_on_delivery';
