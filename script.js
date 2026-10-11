@@ -39,7 +39,7 @@ let isStoreAdmin = false;
 let toastTimer;
 
 function renderProducts(){
-  let visible = products.filter(product => (!showOnlyFavorites || favorites.includes(product.id)) && (activeFilter === 'ყველა' || product.category === activeFilter) && `${product.name} ${product.category}`.toLocaleLowerCase('ka').includes(searchTerm.toLocaleLowerCase('ka')));
+  let visible = products.filter(product => product.image && (!showOnlyFavorites || favorites.includes(product.id)) && (activeFilter === 'ყველა' || product.category === activeFilter) && `${product.name} ${product.category}`.toLocaleLowerCase('ka').includes(searchTerm.toLocaleLowerCase('ka')));
   const sort = $('#sort-products').value;
   if(sort === 'price-low') visible.sort((a,b)=>a.price-b.price);
   else if(sort === 'price-high') visible.sort((a,b)=>b.price-a.price);
