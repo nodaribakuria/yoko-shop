@@ -228,6 +228,7 @@ $('#checkout-form').addEventListener('submit',async event=>{
     const {data,error}=await supabaseClient.rpc('place_order',{p_customer_name:String(values.get('name')).trim(),p_customer_phone:String(values.get('phone')).trim(),p_shipping_address:String(values.get('address')).trim(),p_items:orderItems});
     if(error){
       console.error('Order submission failed:',error);
+      if(/Could not find the function public\.place_order|schema cache/i.test(error.message||''))throw new Error('შეკვეთის სისტემა ჯერ არ არის დაყენებული Supabase-ში. მაღაზიის მფლობელმა Supabase Dashboard-ის SQL Editor-ში უნდა გაუშვას განახლებული supabase-setup.sql.');
       if(/no longer available/i.test(error.message||''))throw new Error('ეს პროდუქტი შეკვეთის სისტემაში ჯერ არ არის დამატებული. Supabase SQL-ში გაუშვი საიტის განახლებული ფასების კოდი.');
       if(/sign in|auth/i.test(error.message||''))throw new Error('შეკვეთის გასაფორმებლად თავიდან შედი შენს ანგარიშში.');
       throw new Error('შეკვეთა ვერ შეინახა. სცადე ხელახლა; თუ ისევ არ იმუშავებს, მოგვწერე ეს შეტყობინება: '+(error.message||error.code||'უცნობი შეცდომა'));
