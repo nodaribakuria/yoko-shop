@@ -16,20 +16,31 @@ function showNotice(message, isError = false) {
 async function loadMessages() {
   if (!supabaseClient || refreshing) return;
   refreshing = true;
-  const { data, error } = await supabaseClient.from('chat_messages')
-    .select('id,sender_id,sender_role,body,created_at')
-    .eq('order_id', orderId).order('created_at', { ascending: true }).limit(300);
-  refreshing = false;
-  if (error) { showNotice('შეტყობინებები ვერ ჩაიტვირთა. განაახლე გვერდი ან გადაამოწმე ჩატის SQL.', true); return; }
-  const thread = $('#chat-thread');
-  const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
-  thread.innerHTML = data.length ? data.map((message) => {
-    const mine = message.sender_id === currentUser.id;
-    const sender = message.sender_role === 'admin' ? 'მაღაზია' : 'მყიდველი';
-    return `<article class="chat-message ${mine ? 'mine' : ''}"><p>${escapeHtml(message.body)}</p><time><span class="chat-sender">${sender}</span> · ${escapeHtml(new Date(message.created_at).toLocaleString('ka-GE'))}</time></article>`;
-  }).join('') : '<p class="chat-empty">ჯერ შეტყობინებები არ არის. შეგიძლია მოგვწერო.</p>';
-  if (nearBottom) thread.scrollTop = thread.scrollHeight;
-  showNotice('შეტყობინებები ახლდება ავტომატურად.');
+  let timeoutId;
+  try {
+    showNotice('შეტყობინებები იტვირთება…');
+    const query = supabaseClient.from('chat_messages')
+      .select('id,sender_id,sender_role,body,created_at')
+      .eq('order_id', orderId).order('created_at', { ascending: true }).limit(300);
+    const timeout = new Promise((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error('Chat request timed out')), 12000); });
+    const { data, error } = await Promise.race([query, timeout]);
+    if (error) { showNotice('შეტყობინებები ვერ ჩაიტვირთა. გადაამოწმე, რომ Supabase-ში ჩატის SQL გაშვებულია.', true); return; }
+    const thread = $('#chat-thread');
+    const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+    thread.innerHTML = data.length ? data.map((message) => {
+      const mine = message.sender_id === currentUser.id;
+      const sender = message.sender_role === 'admin' ? 'მაღაზია' : 'მყიდველი';
+      return `<article class="chat-message ${mine ? 'mine' : ''}"><p>${escapeHtml(message.body)}</p><time><span class="chat-sender">${sender}</span> · ${escapeHtml(new Date(message.created_at).toLocaleString('ka-GE'))}</time></article>`;
+    }).join('') : '<p class="chat-empty">ჯერ შეტყობინებები არ არის. შეგიძლია მოგვწერო.</p>';
+    if (nearBottom) thread.scrollTop = thread.scrollHeight;
+    showNotice('შეტყობინებები ახლდება ავტომატურად.');
+  } catch (error) {
+    console.error('Chat messages could not be loaded:', error);
+    showNotice('ჩატთან კავშირი ვერ შედგა. განაახლე გვერდი და გადაამოწმე Supabase-ის ჩატის SQL.', true);
+  } finally {
+    window.clearTimeout(timeoutId);
+    refreshing = false;
+  }
 }
 
 async function initializeChat() {
@@ -43,10 +54,17 @@ async function initializeChat() {
     $('#chat-login').hidden = false;
     return;
   }
-  const [{ data: order, error: orderError }, { data: admin }] = await Promise.all([
-    supabaseClient.from('orders').select('id,user_id,customer_name,items,total').eq('id', orderId).maybeSingle(),
-    supabaseClient.from('store_admins').select('user_id').eq('user_id', currentUser.id).maybeSingle(),
-  ]);
+  let order, orderError, admin;
+  try {
+    [{ data: order, error: orderError }, { data: admin }] = await Promise.all([
+      supabaseClient.from('orders').select('id,user_id,customer_name,items,total').eq('id', orderId).maybeSingle(),
+      supabaseClient.from('store_admins').select('user_id').eq('user_id', currentUser.id).maybeSingle(),
+    ]);
+  } catch (error) {
+    console.error('Order chat could not be opened:', error);
+    showNotice('სერვერთან დაკავშირება ვერ მოხერხდა. განაახლე გვერდი და სცადე ხელახლა.', true);
+    return;
+  }
   if (orderError || !order || (order.user_id !== currentUser.id && !admin)) {
     showNotice('ამ შეკვეთის ჩათზე წვდომა არ გაქვს. შედი მყიდველის ან მაღაზიის მფლობელის ანგარიშით.', true);
     return;
