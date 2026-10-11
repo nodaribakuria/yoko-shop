@@ -10,8 +10,14 @@
   const registerTab = document.querySelector('#register-tab');
   const loginTab = document.querySelector('#login-tab');
   const isLoginRoute = new URLSearchParams(location.search).get('view') === 'login';
-  const nextStep = new URLSearchParams(location.search).get('next');
-  const storeUrl = nextStep === 'checkout' ? 'shop.html?checkout=1' : 'shop.html';
+  const searchParams = new URLSearchParams(location.search);
+  const nextStep = searchParams.get('next');
+  const chatOrderId = searchParams.get('order') || '';
+  const storeUrl = nextStep === 'checkout'
+    ? 'shop.html?checkout=1'
+    : nextStep === 'chat' && /^[0-9a-f-]{36}$/i.test(chatOrderId)
+      ? `chat.html?order=${encodeURIComponent(chatOrderId)}`
+      : 'shop.html';
 
   function showView(view) {
     const login = view === 'login';
@@ -44,7 +50,7 @@
   }
 
   client.auth.getSession().then(({data}) => {
-    if (data.session && (!isLoginRoute || nextStep === 'checkout')) location.replace(storeUrl);
+    if (data.session && (!isLoginRoute || nextStep === 'checkout' || nextStep === 'chat')) location.replace(storeUrl);
   });
 
   registrationForm.addEventListener('submit', async event => {

@@ -78,6 +78,7 @@ Deno.serve(async (request) => {
     return `<li>${escapeHtml(item.name)} × ${quantity} — ${(price * quantity).toFixed(2)} ₾</li>`;
   }).join('');
   const total = `${Number(order.total).toFixed(2)} ₾`;
+  const chatUrl = `https://nodaribakuria.github.io/yoko-shop/chat.html?order=${encodeURIComponent(order.id)}`;
   const text = [
     `ახალი შეკვეთა #${order.id}`,
     `სახელი: ${order.customer_name}`,
@@ -87,8 +88,9 @@ Deno.serve(async (request) => {
     'ნივთები:', ...itemLines,
     `მიწოდება: ${Number(order.shipping_fee) ? `${Number(order.shipping_fee).toFixed(2)} ₾` : 'უფასო'}`,
     `ჯამი: ${total}`,
+    `შეკვეთაზე ჩათი: ${chatUrl}`,
   ].join('\n');
-  const html = `<h2>ახალი შეკვეთა</h2><p><strong>შეკვეთის ნომერი:</strong> ${escapeHtml(order.id)}</p><p><strong>სახელი:</strong> ${escapeHtml(order.customer_name)}<br><strong>ტელეფონი:</strong> ${escapeHtml(order.customer_phone)}<br><strong>ელფოსტა:</strong> ${escapeHtml(order.customer_email || 'მითითებული არ არის')}<br><strong>მისამართი:</strong> ${escapeHtml(order.shipping_address)}</p><h3>ნივთები</h3><ul>${htmlItems}</ul><p>მიწოდება: ${Number(order.shipping_fee) ? `${Number(order.shipping_fee).toFixed(2)} ₾` : 'უფასო'}<br><strong>ჯამი: ${total}</strong></p>`;
+  const html = `<h2>ახალი შეკვეთა</h2><p><strong>შეკვეთის ნომერი:</strong> ${escapeHtml(order.id)}</p><p><strong>სახელი:</strong> ${escapeHtml(order.customer_name)}<br><strong>ტელეფონი:</strong> ${escapeHtml(order.customer_phone)}<br><strong>ელფოსტა:</strong> ${escapeHtml(order.customer_email || 'მითითებული არ არის')}<br><strong>მისამართი:</strong> ${escapeHtml(order.shipping_address)}</p><h3>ნივთები</h3><ul>${htmlItems}</ul><p>მიწოდება: ${Number(order.shipping_fee) ? `${Number(order.shipping_fee).toFixed(2)} ₾` : 'უფასო'}<br><strong>ჯამი: ${total}</strong></p><p><a href="${chatUrl}">შეკვეთაზე ჩატის გახსნა</a></p>`;
 
   const mailResponse = await fetch('https://api.resend.com/emails', {
     method: 'POST',

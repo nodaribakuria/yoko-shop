@@ -234,6 +234,7 @@ $('#checkout-form').addEventListener('submit',async event=>{
       throw new Error('შეკვეთა ვერ შეინახა. სცადე ხელახლა; თუ ისევ არ იმუშავებს, მოგვწერე ეს შეტყობინება: '+(error.message||error.code||'უცნობი შეცდომა'));
     }
     $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data}`;
+    $('#order-chat-link').href=`chat.html?order=${encodeURIComponent(data)}`;
     const emailNotice=$('#order-email-notice');
     emailNotice.textContent='';
     emailNotice.hidden=false;
@@ -258,7 +259,7 @@ async function loadAdminOrders(){
     const date=new Date(order.created_at).toLocaleString('ka-GE');
     const options=['ახალი','დამუშავებაში','გაგზავნილი','დასრულებული','გაუქმებული'].map(status=>`<option value="${status}" ${order.status===status?'selected':''}>${status}</option>`).join('');
     const shippingFee=Number(order.shipping_fee)||0;
-    return `<article class="store-order"><div class="store-order-heading"><strong>${escapeHtml(order.customer_name)}</strong><span>${escapeHtml(order.status)}</span></div><p>${escapeHtml(order.customer_phone)} · ${escapeHtml(order.customer_email||'ელფოსტა არ არის მითითებული')} · ${escapeHtml(order.shipping_address)}</p><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(date)}</time><strong>${money(Number(order.total)||0)}</strong></div><small class="store-order-id">${escapeHtml(order.id)}</small><form class="store-order-status-form" data-order-id="${escapeHtml(order.id)}"><label>შეკვეთის სტატუსი<select name="status">${options}</select></label><button type="submit" class="button button-outline">შენახვა</button></form></article>`;
+    return `<article class="store-order"><div class="store-order-heading"><strong>${escapeHtml(order.customer_name)}</strong><span>${escapeHtml(order.status)}</span></div><p>${escapeHtml(order.customer_phone)} · ${escapeHtml(order.customer_email||'ელფოსტა არ არის მითითებული')} · ${escapeHtml(order.shipping_address)}</p><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(date)}</time><strong>${money(Number(order.total)||0)}</strong></div><small class="store-order-id">${escapeHtml(order.id)}</small><a class="button button-outline order-chat-link" href="chat.html?order=${encodeURIComponent(order.id)}">მყიდველთან ჩათი ↗</a><form class="store-order-status-form" data-order-id="${escapeHtml(order.id)}"><label>შეკვეთის სტატუსი<select name="status">${options}</select></label><button type="submit" class="button button-outline">შენახვა</button></form></article>`;
   }).join('');
 }
 $('#refresh-orders').addEventListener('click',loadAdminOrders);
@@ -284,7 +285,7 @@ async function loadCustomerOrders(){
   $('#customer-order-list').innerHTML=data.map(order=>{
     const lines=(Array.isArray(order.items)?order.items:[]).map(item=>`<li>${escapeHtml(item.name)} × ${Number(item.quantity)||0} — ${money(Number(item.unit_price||0)*(Number(item.quantity)||0))}</li>`).join('');
     const shippingFee=Number(order.shipping_fee)||0;
-    return `<article class="store-order"><div class="store-order-heading"><strong>შეკვეთა ${escapeHtml(order.id.slice(0,8))}</strong><span>${escapeHtml(order.status)}</span></div><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(new Date(order.created_at).toLocaleString('ka-GE'))}</time><strong>${money(Number(order.total)||0)}</strong></div></article>`;
+    return `<article class="store-order"><div class="store-order-heading"><strong>შეკვეთა ${escapeHtml(order.id.slice(0,8))}</strong><span>${escapeHtml(order.status)}</span></div><ul>${lines}</ul><p class="store-order-shipping">მიწოდება: ${shippingFee?money(shippingFee):'უფასო'} · ${order.payment_method==='cash_on_delivery'?'მიტანისას გადახდა':'ონლაინ ბარათი'}</p><div class="store-order-total"><time>${escapeHtml(new Date(order.created_at).toLocaleString('ka-GE'))}</time><strong>${money(Number(order.total)||0)}</strong></div><a class="button button-outline order-chat-link" href="chat.html?order=${encodeURIComponent(order.id)}">მაღაზიას მიწერე ↗</a></article>`;
   }).join('');
 }
 $('#refresh-customer-orders').addEventListener('click',loadCustomerOrders);

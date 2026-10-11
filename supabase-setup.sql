@@ -240,6 +240,51 @@ $$;
 revoke all on function public.place_order(text, text, text, jsonb) from public, anon;
 grant execute on function public.place_order(text, text, text, jsonb) to authenticated;
 
+-- A customer can chat about an order; only that customer and store admins can
+-- read it. Message sender identity/role are checked by RLS, not trusted from UI.
+create table if not exists public.chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  sender_role text not null check (sender_role in ('customer', 'admin')),
+  body text not null check (length(btrim(body)) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+
+alter table public.chat_messages enable row level security;
+revoke all on public.chat_messages from public, anon;
+grant select, insert on public.chat_messages to authenticated;
+revoke update, delete on public.chat_messages from anon, authenticated;
+
+drop policy if exists "Order participants read chat messages" on public.chat_messages;
+create policy "Order participants read chat messages" on public.chat_messages
+  for select to authenticated using (
+    exists (
+      select 1 from public.orders o
+      where o.id = order_id
+        and (o.user_id = auth.uid() or exists (
+          select 1 from public.store_admins a where a.user_id = auth.uid()
+        ))
+    )
+  );
+
+drop policy if exists "Order participants send chat messages" on public.chat_messages;
+create policy "Order participants send chat messages" on public.chat_messages
+  for insert to authenticated with check (
+    sender_id = auth.uid()
+    and (
+      (sender_role = 'customer' and exists (
+        select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid()
+      ))
+      or (sender_role = 'admin' and exists (
+        select 1 from public.store_admins a where a.user_id = auth.uid()
+      ))
+    )
+  );
+
+create index if not exists chat_messages_order_created_idx
+  on public.chat_messages (order_id, created_at);
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('product-images', 'product-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 on conflict (id) do update set
