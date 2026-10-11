@@ -213,6 +213,12 @@ $('#checkout-form').addEventListener('submit',async event=>{
   if(!await requireProfileForPurchase())return;
   if(!cart.length){showToast('კალათა ცარიელია');return}
   const submitButton=$('#checkout-form button[type="submit"]');
+  const checkoutStatus=$('#checkout-status');
+  checkoutStatus.hidden=false;
+  checkoutStatus.className='checkout-status';
+  checkoutStatus.textContent='შეკვეთა იგზავნება…';
+  const originalButtonText=submitButton.textContent;
+  submitButton.textContent='იგზავნება…';
   submitButton.disabled=true;
   try{
     const values=new FormData(event.currentTarget);
@@ -220,7 +226,12 @@ $('#checkout-form').addEventListener('submit',async event=>{
     if(paymentMethod!=='cash_on_delivery')throw new Error('ონლაინ ბარათით გადახდა ჯერ არ არის ჩართული. აირჩიე მიტანისას გადახდა.');
     const orderItems=cart.map(item=>({id:item.id,quantity:item.qty}));
     const {data,error}=await supabaseClient.rpc('place_order',{p_customer_name:String(values.get('name')).trim(),p_customer_phone:String(values.get('phone')).trim(),p_shipping_address:String(values.get('address')).trim(),p_items:orderItems});
-    if(error)throw new Error('შეკვეთა ვერ შეინახა. გადაამოწმე Supabase-ის განახლებული SQL და სცადე ხელახლა.');
+    if(error){
+      console.error('Order submission failed:',error);
+      if(/no longer available/i.test(error.message||''))throw new Error('ეს პროდუქტი შეკვეთის სისტემაში ჯერ არ არის დამატებული. Supabase SQL-ში გაუშვი საიტის განახლებული ფასების კოდი.');
+      if(/sign in|auth/i.test(error.message||''))throw new Error('შეკვეთის გასაფორმებლად თავიდან შედი შენს ანგარიშში.');
+      throw new Error('შეკვეთა ვერ შეინახა. სცადე ხელახლა; თუ ისევ არ იმუშავებს, მოგვწერე ეს შეტყობინება: '+(error.message||error.code||'უცნობი შეცდომა'));
+    }
     $('#order-confirmation-number').textContent=`შეკვეთის ნომერი: ${data}`;
     const emailNotice=$('#order-email-notice');
     emailNotice.textContent='';
@@ -229,10 +240,10 @@ $('#checkout-form').addEventListener('submit',async event=>{
     try{({error:emailError}=await supabaseClient.functions.invoke('send-order-notification',{body:{orderId:data}}))}catch{emailError=new Error('notification failed')}
     emailNotice.textContent=emailError?'შეკვეთა შენახულია, მაგრამ ელფოსტა ვერ გაიგზავნა. მფლობელს შეკვეთა პროფილში შეუძლია ნახოს.':'შეკვეთის დეტალები მაღაზიის ელფოსტაზე გაიგზავნა.';
     $('#checkout-form').hidden=true;$('.checkout-note').hidden=true;$('#order-confirmation').hidden=false;cart=[];persistCart();
-  }catch(error){showToast(error.message||'შეკვეთა ვერ შეინახა')}
-  finally{submitButton.disabled=false}
+  }catch(error){checkoutStatus.className='checkout-status error';checkoutStatus.textContent=error.message||'შეკვეთა ვერ შეინახა';console.error('Checkout error:',error)}
+  finally{submitButton.disabled=false;submitButton.textContent=originalButtonText}
 });
-$('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;$('#order-email-notice').textContent='';$('#order-email-notice').hidden=true;closeCart()});
+$('#finish-order').addEventListener('click',()=>{$('#checkout-dialog').close();$('#checkout-form').reset();$('#checkout-form').hidden=false;$('.checkout-note').hidden=false;$('#order-confirmation').hidden=true;$('#order-email-notice').textContent='';$('#order-email-notice').hidden=true;$('#checkout-status').textContent='';$('#checkout-status').hidden=true;closeCart()});
 
 async function loadAdminOrders(){
   if(!supabaseClient||!isStoreAdmin)return;
