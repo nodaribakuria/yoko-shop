@@ -1,3 +1,5 @@
 .checkout-status{margin:4px 0 12px;padding:10px 12px;border:1px solid #62432f;border-radius:6px;color:#f8f2ec;font-size:12px;line-height:1.5}
 .checkout-status.error{border-color:#a34c36;background:#351b15;color:#ffd8c9}
 #order-email-notice{font-size:12px;line-height:1.5}
+
+.floating-chat-link{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:12;padding:14px 20px;border-radius:30px;background:#ff5a0a;color:#170d08;font-weight:700;box-shadow:0 4px 20px #0006;text-decoration:none}.floating-chat-link:focus-visible{outline:3px solid #fff;outline-offset:3px}.cancel-order-button{margin:12px 0 0 8px;color:#ff9a68}.profile-chat-link{margin-bottom:12px}

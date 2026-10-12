@@ -151,6 +151,163 @@ create policy "Store admins update order status" on public.orders
     exists (select 1 from public.store_admins where user_id = auth.uid())
   );
 
+-- One persistent support conversation per customer, independent of orders.
+create table if not exists public.chat_conversations (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null unique references auth.users(id) on delete cascade,
+  customer_name text not null default '',
+  customer_email text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.support_chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.chat_conversations(id) on delete cascade,
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  sender_role text not null check (sender_role in ('customer', 'admin')),
+  body text not null default '',
+  attachment_path text,
+  constraint support_chat_messages_body_check check (
+    length(body) <= 2000 and (length(btrim(body)) > 0 or attachment_path is not null)
+  ),
+  created_at timestamptz not null default now()
+);
+
+alter table public.support_chat_messages add column if not exists attachment_path text;
+alter table public.support_chat_messages alter column body set default '';
+alter table public.support_chat_messages drop constraint if exists support_chat_messages_body_check;
+alter table public.support_chat_messages add constraint support_chat_messages_body_check check (
+  length(body) <= 2000 and (length(btrim(body)) > 0 or attachment_path is not null)
+);
+
+alter table public.chat_conversations enable row level security;
+alter table public.support_chat_messages enable row level security;
+revoke all on public.chat_conversations from public, anon, authenticated;
+revoke all on public.support_chat_messages from public, anon;
+grant select on public.chat_conversations to authenticated;
+grant select, insert on public.support_chat_messages to authenticated;
+revoke update, delete on public.support_chat_messages from public, anon, authenticated;
+
+drop policy if exists "Customers and admins read chat conversations" on public.chat_conversations;
+create policy "Customers and admins read chat conversations" on public.chat_conversations
+  for select to authenticated using (
+    customer_id = auth.uid() or exists (
+      select 1 from public.store_admins a where a.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Chat participants read support messages" on public.support_chat_messages;
+create policy "Chat participants read support messages" on public.support_chat_messages
+  for select to authenticated using (
+    exists (
+      select 1 from public.chat_conversations c
+      where c.id = conversation_id
+        and (c.customer_id = auth.uid() or exists (
+          select 1 from public.store_admins a where a.user_id = auth.uid()
+        ))
+    )
+  );
+
+drop policy if exists "Chat participants send support messages" on public.support_chat_messages;
+create policy "Chat participants send support messages" on public.support_chat_messages
+  for insert to authenticated with check (
+    sender_id = auth.uid() and (
+      (sender_role = 'customer' and exists (
+        select 1 from public.chat_conversations c
+        where c.id = conversation_id and c.customer_id = auth.uid()
+      ))
+      or (sender_role = 'admin' and exists (
+        select 1 from public.chat_conversations c
+        join public.store_admins a on a.user_id = auth.uid()
+        where c.id = conversation_id
+      ))
+    )
+    and (attachment_path is null or attachment_path like conversation_id::text || '/' || auth.uid()::text || '/%')
+  );
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('chat-attachments', 'chat-attachments', false, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Chat participants upload attachments" on storage.objects;
+create policy "Chat participants upload attachments" on storage.objects
+  for insert to authenticated with check (
+    bucket_id = 'chat-attachments'
+    and exists (
+      select 1 from public.chat_conversations c
+      where c.id::text = (storage.foldername(name))[1]
+        and (c.customer_id = auth.uid() or exists (
+          select 1 from public.store_admins a where a.user_id = auth.uid()
+        ))
+        and (storage.foldername(name))[2] = auth.uid()::text
+    )
+  );
+
+drop policy if exists "Chat participants read attachments" on storage.objects;
+create policy "Chat participants read attachments" on storage.objects
+  for select to authenticated using (
+    bucket_id = 'chat-attachments'
+    and exists (
+      select 1 from public.chat_conversations c
+      where c.id::text = (storage.foldername(name))[1]
+        and (c.customer_id = auth.uid() or exists (
+          select 1 from public.store_admins a where a.user_id = auth.uid()
+        ))
+    )
+  );
+
+create or replace function public.get_or_create_chat_conversation()
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_customer_id uuid := auth.uid();
+  v_conversation_id uuid;
+  v_customer_name text;
+  v_customer_email text;
+begin
+  if v_customer_id is null then
+    raise exception 'Sign in is required to open chat';
+  end if;
+  select coalesce(u.raw_user_meta_data->>'full_name', ''), coalesce(u.email, '')
+    into v_customer_name, v_customer_email
+    from auth.users u where u.id = v_customer_id;
+  insert into public.chat_conversations (customer_id, customer_name, customer_email)
+  values (v_customer_id, coalesce(v_customer_name, ''), coalesce(v_customer_email, ''))
+  on conflict (customer_id) do nothing;
+  select id into v_conversation_id
+    from public.chat_conversations where customer_id = v_customer_id;
+  return v_conversation_id;
+end;
+$$;
+revoke all on function public.get_or_create_chat_conversation() from public, anon;
+grant execute on function public.get_or_create_chat_conversation() to authenticated;
+
+create or replace function public.touch_chat_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  update public.chat_conversations set updated_at = now() where id = new.conversation_id;
+  return new;
+end;
+$$;
+drop trigger if exists support_chat_message_updates_conversation on public.support_chat_messages;
+create trigger support_chat_message_updates_conversation
+  after insert on public.support_chat_messages
+  for each row execute function public.touch_chat_conversation();
+
+create index if not exists support_chat_messages_conversation_created_idx
+  on public.support_chat_messages (conversation_id, created_at);
+
 -- Orders are submitted through this function, which derives names, prices,
 -- shipping and total from the server-side catalog and the products table.
 create or replace function public.place_order(
@@ -233,57 +390,16 @@ begin
     btrim(p_shipping_address), v_order_items, v_shipping, 'cash_on_delivery', v_subtotal + v_shipping
   ) returning id into v_order_id;
 
+  insert into public.chat_conversations (customer_id, customer_name, customer_email)
+  values (v_user_id, btrim(p_customer_name), coalesce(v_email, ''))
+  on conflict (customer_id) do nothing;
+
   return v_order_id;
 end;
 $$;
 
 revoke all on function public.place_order(text, text, text, jsonb) from public, anon;
 grant execute on function public.place_order(text, text, text, jsonb) to authenticated;
-
--- A customer can chat about an order; only that customer and store admins can
--- read it. Message sender identity/role are checked by RLS, not trusted from UI.
-create table if not exists public.chat_messages (
-  id uuid primary key default gen_random_uuid(),
-  order_id uuid not null references public.orders(id) on delete cascade,
-  sender_id uuid not null references auth.users(id) on delete cascade,
-  sender_role text not null check (sender_role in ('customer', 'admin')),
-  body text not null check (length(btrim(body)) between 1 and 2000),
-  created_at timestamptz not null default now()
-);
-
-alter table public.chat_messages enable row level security;
-revoke all on public.chat_messages from public, anon;
-grant select, insert on public.chat_messages to authenticated;
-revoke update, delete on public.chat_messages from anon, authenticated;
-
-drop policy if exists "Order participants read chat messages" on public.chat_messages;
-create policy "Order participants read chat messages" on public.chat_messages
-  for select to authenticated using (
-    exists (
-      select 1 from public.orders o
-      where o.id = order_id
-        and (o.user_id = auth.uid() or exists (
-          select 1 from public.store_admins a where a.user_id = auth.uid()
-        ))
-    )
-  );
-
-drop policy if exists "Order participants send chat messages" on public.chat_messages;
-create policy "Order participants send chat messages" on public.chat_messages
-  for insert to authenticated with check (
-    sender_id = auth.uid()
-    and (
-      (sender_role = 'customer' and exists (
-        select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid()
-      ))
-      or (sender_role = 'admin' and exists (
-        select 1 from public.store_admins a where a.user_id = auth.uid()
-      ))
-    )
-  );
-
-create index if not exists chat_messages_order_created_idx
-  on public.chat_messages (order_id, created_at);
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('product-images', 'product-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])

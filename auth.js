@@ -12,11 +12,11 @@
   const isLoginRoute = new URLSearchParams(location.search).get('view') === 'login';
   const searchParams = new URLSearchParams(location.search);
   const nextStep = searchParams.get('next');
-  const chatOrderId = searchParams.get('order') || '';
+  const chatConversation = searchParams.get('conversation') || '';
   const storeUrl = nextStep === 'checkout'
     ? 'shop.html?checkout=1'
-    : nextStep === 'chat' && /^[0-9a-f-]{36}$/i.test(chatOrderId)
-      ? `chat.html?order=${encodeURIComponent(chatOrderId)}`
+    : nextStep === 'chat'
+      ? `chat.html${/^[0-9a-f-]{36}$/i.test(chatConversation) ? `?conversation=${encodeURIComponent(chatConversation)}` : ''}`
       : 'shop.html';
 
   function showView(view) {

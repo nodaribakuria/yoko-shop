@@ -10,17 +10,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="checkout-feedback.css" />
+    <link rel="stylesheet" href="checkout-feedback.css?v=20261012-2" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="supabase-config.js" defer></script>
-    <script src="script.js" defer></script>
+    <script src="script.js?v=20261012-2" defer></script>
   </head>
   <body>
     <div class="announcement">უფასო მიწოდება 150 ₾-დან <span>✦</span> ანგარიშის გარეშე კატალოგის დათვალიერება</div>
     <header class="site-header">
       <a class="brand brand-image-link" href="#top" aria-label="Yoko Shop მთავარი გვერდი"><img class="brand-logo-image" src="logo.png" alt="Yoko Shop" /></a>
       <nav class="main-nav" aria-label="მთავარი ნავიგაცია">
-        <a href="#shop">მაღაზია</a><a href="#categories">კატეგორიები</a><a href="#story">ჩვენ შესახებ</a>
+        <a href="#shop">მაღაზია</a><a href="#categories">კატეგორიები</a><a href="#story">ჩვენ შესახებ</a><a href="chat.html">ჩათი</a>
       </nav>
       <div class="header-actions">
         <button class="icon-button search-toggle" aria-label="ძიება" title="ძიება"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.2"/><path d="m16.5 16.5 4 4"/></svg></button>
@@ -86,6 +86,7 @@
       <section id="profile-register-panel" hidden><p class="checkout-note">ანგარიშის მართვისთვის <a href="index.html?view=login">შესვლის გვერდზე გადასვლა</a>.</p></section>
       <section id="profile-dashboard" hidden>
         <div class="profile-summary"><span class="profile-avatar">y.</span><div><strong id="profile-name"></strong><span id="profile-email"></span></div></div>
+        <a class="button button-outline profile-chat-link" id="profile-chat-link" href="chat.html">ჩემი ჩათი ↗</a>
         <button class="button button-outline profile-logout" id="profile-logout" type="button">სხვა ანგარიშით შესვლა <span>↗</span></button>
         <p class="profile-hint" id="store-customer-note" hidden>შეძენა მომხმარებლის ანგარიშით არის შესაძლებელი. პროდუქტის მართვა მხოლოდ მაღაზიის მფლობელს შეუძლია.</p>
         <section class="profile-listings customer-orders-panel" id="customer-orders-panel" hidden>
@@ -113,6 +114,7 @@
         </section>
       </section>
     </dialog>
-    <dialog class="checkout-dialog" id="checkout-dialog"><form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="დახურვა">×</button></form><p class="eyebrow">ბოლო ნაბიჯი</p><h2>შეკვეთის <em>დასრულება</em></h2><p class="checkout-note">მიუთითე საკონტაქტო ინფორმაცია და მიწოდების მისამართი. მონაცემები შეკვეთის დასამუშავებლად შეინახება და მაღაზიის მფლობელს ეჩვენება.</p><form id="checkout-form" class="checkout-form"><label>სახელი და გვარი<input name="name" autocomplete="name" required maxlength="120" placeholder="მაგ. ნინო ბერიძე" /></label><label>ტელეფონი<input name="phone" type="tel" autocomplete="tel" required maxlength="40" placeholder="+995 5XX XX XX XX" /></label><label>მიწოდების მისამართი<textarea name="address" autocomplete="street-address" required maxlength="500" rows="2" placeholder="ქალაქი, ქუჩა, სახლის ნომერი"></textarea></label><fieldset class="payment-options"><legend>გადახდის მეთოდი</legend><label><input type="radio" name="paymentMethod" value="cash_on_delivery" checked /> მიტანისას გადახდა</label><label class="payment-unavailable"><input type="radio" name="paymentMethod" value="online_card" disabled /> ონლაინ ბარათით <span>— მალე</span></label><small>ონლაინ გადახდა ჩაირთვება გადახდის პროვაიდერის დაკავშირების შემდეგ.</small></fieldset><div class="checkout-total"><span>პროდუქტები</span><strong id="checkout-subtotal">0 ₾</strong><span>მიწოდება</span><strong id="checkout-shipping">0 ₾</strong><span>გადასახდელი ჯამი</span><strong id="checkout-total">0 ₾</strong></div><p class="checkout-status" id="checkout-status" role="status" aria-live="polite" hidden></p><button class="button button-dark" type="submit">შეკვეთის დადასტურება <span>↗</span></button></form><div class="order-confirmation" id="order-confirmation" hidden><span>✳</span><h3>შეკვეთა მიღებულია</h3><p id="order-confirmation-number"></p><p id="order-email-notice" aria-live="polite"></p><a class="button button-outline order-chat-link" id="order-chat-link" href="chat.html">შეკვეთაზე ჩატის გახსნა ↗</a><p>შეკვეთასთან დაკავშირებულ კითხვაზე ჩათში მოგვწერე. მეილში ჩატის ბმულს მიიღებ, თუ შეტყობინება წარმატებით გაიგზავნა.</p><button class="button button-outline" id="finish-order">დახურვა</button></div></dialog>
+    <dialog class="checkout-dialog" id="checkout-dialog"><form method="dialog" class="dialog-close-form"><button class="icon-button" aria-label="დახურვა">×</button></form><p class="eyebrow">ბოლო ნაბიჯი</p><h2>შეკვეთის <em>დასრულება</em></h2><p class="checkout-note">მიუთითე საკონტაქტო ინფორმაცია და მიწოდების მისამართი. მონაცემები შეკვეთის დასამუშავებლად შეინახება და მაღაზიის მფლობელს ეჩვენება.</p><form id="checkout-form" class="checkout-form"><label>სახელი და გვარი<input name="name" autocomplete="name" required maxlength="120" placeholder="მაგ. ნინო ბერიძე" /></label><label>ტელეფონი<input name="phone" type="tel" autocomplete="tel" required maxlength="40" placeholder="+995 5XX XX XX XX" /></label><label>მიწოდების მისამართი<textarea name="address" autocomplete="street-address" required maxlength="500" rows="2" placeholder="ქალაქი, ქუჩა, სახლის ნომერი"></textarea></label><fieldset class="payment-options"><legend>გადახდის მეთოდი</legend><label><input type="radio" name="paymentMethod" value="cash_on_delivery" checked /> მიტანისას გადახდა</label><label class="payment-unavailable"><input type="radio" name="paymentMethod" value="online_card" disabled /> ონლაინ ბარათით <span>— მალე</span></label><small>ონლაინ გადახდა ჩაირთვება გადახდის პროვაიდერის დაკავშირების შემდეგ.</small></fieldset><div class="checkout-total"><span>პროდუქტები</span><strong id="checkout-subtotal">0 ₾</strong><span>მიწოდება</span><strong id="checkout-shipping">0 ₾</strong><span>გადასახდელი ჯამი</span><strong id="checkout-total">0 ₾</strong></div><p class="checkout-status" id="checkout-status" role="status" aria-live="polite" hidden></p><button class="button button-dark" type="submit">შეკვეთის დადასტურება <span>↗</span></button></form><div class="order-confirmation" id="order-confirmation" hidden><span>✳</span><h3>შეკვეთა მიღებულია</h3><p id="order-confirmation-number"></p><p id="order-email-notice" aria-live="polite"></p><a class="button button-outline order-chat-link" id="order-chat-link" href="chat.html">Yoko Shop-ს ჩათში მიწერე ↗</a><p>ჩათში შეგიძლია ტექსტი და ფოტო გამოგზავნო. შეტყობინებას მაღაზიის ჩათების გვერდზე ვნახავთ.</p><button class="button button-outline" id="finish-order">დახურვა</button></div></dialog>
+  <a class="floating-chat-link" href="chat.html" aria-label="ჩათის გახსნა">ჩათი ↗</a>
   </body>
 </html>

@@ -4,30 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#100d0b" />
-    <title>შეკვეთის ჩათი — Yoko Shop</title>
+    <title>ჩათი — Yoko Shop</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="chat.css" />
+    <link rel="stylesheet" href="chat.css?v=20261012-2" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="supabase-config.js" defer></script>
-    <script src="chat.js" defer></script>
+    <script src="chat.js?v=20261012-2" defer></script>
   </head>
   <body>
     <main class="chat-page">
       <a class="chat-brand" href="shop.html">Yoko Shop <span>↗</span></a>
       <section class="chat-card" aria-labelledby="chat-title">
-        <p class="chat-eyebrow">შეკვეთის მხარდაჭერა</p>
+        <p class="chat-eyebrow">მომხმარებლის მხარდაჭერა</p>
         <h1 id="chat-title">მოგვწერე <em>ჩათში</em></h1>
-        <p class="chat-order" id="chat-order">შეკვეთა იტვირთება…</p>
+        <p class="chat-order" id="chat-order">პირდაპირი საუბარი Yoko Shop-თან</p>
         <p class="chat-notice" id="chat-notice" role="status" aria-live="polite">ჩათი იტვირთება…</p>
-        <div class="chat-login" id="chat-login" hidden><a class="chat-button" href="index.html?view=login">ანგარიშში შესვლა</a></div>
-        <div class="chat-thread" id="chat-thread" aria-live="polite" aria-label="შეტყობინებები"></div>
-        <form class="chat-compose" id="chat-form" hidden>
-          <label class="sr-only" for="chat-message">შეტყობინება</label>
-          <textarea id="chat-message" name="message" rows="3" maxlength="2000" required placeholder="დაწერე შეტყობინება…"></textarea>
-          <button class="chat-button" type="submit">გაგზავნა <span>↗</span></button>
-        </form>
+        <div class="chat-login" id="chat-login" hidden><a class="chat-button" href="index.html?view=login&amp;next=chat">ანგარიშში შესვლა</a></div>
+        <section class="chat-inbox" id="chat-inbox" hidden aria-label="შემოსული ჩათები">
+          <h2>მომხმარებლების ჩათები</h2>
+          <div id="chat-inbox-list"></div>
+        </section>
+        <section class="chat-panel" id="chat-panel" hidden>
+          <a class="chat-inbox-return" id="chat-inbox-return" href="chat.html" hidden>← ყველა ჩათი</a>
+          <div class="chat-thread" id="chat-thread" aria-live="polite" aria-label="შეტყობინებები"></div>
+          <form class="chat-compose" id="chat-form">
+            <label class="chat-photo-button" for="chat-photo" title="ფოტოს მიმაგრება" aria-label="ფოტოს მიმაგრება">＋ ფოტო</label>
+            <input class="sr-only" id="chat-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+            <span class="chat-file-name" id="chat-file-name">ფოტო არ არის არჩეული</span>
+            <label class="sr-only" for="chat-message">შეტყობინება</label>
+            <textarea id="chat-message" name="message" rows="3" maxlength="2000" placeholder="დაწერე შეტყობინება ან მიამაგრე ფოტო…"></textarea>
+            <button class="chat-button" type="submit">გაგზავნა <span>↗</span></button>
+          </form>
+        </section>
         <a class="chat-back" href="shop.html">← მაღაზიაში დაბრუნება</a>
       </section>
     </main>
